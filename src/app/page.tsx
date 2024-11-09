@@ -3,18 +3,18 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary to-primary-dark text-white">
+    <div className="min-h-screen bg-gradient-to-b from-secondary to-primary text-white">
       <header className="container mx-auto p-6 flex justify-between items-center">
         <div className="text-2xl font-bold">Scancontract</div>
         <nav className="space-x-4">
           <Link 
-            href="/login" 
+            href="/auth/login" 
             className="px-4 py-2 rounded-full border border-white/20 hover:bg-white/10 transition"
           >
             Login
           </Link>
           <Link 
-            href="/register" 
+            href="/auth/register" 
             className="px-4 py-2 rounded-full bg-white text-primary hover:bg-gray-100 transition"
           >
             Get Started

@@ -1,0 +1,47 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  name              String?
+  role              UserRole   @default(free)
+  contractsRemaining Int       @default(3)
+  contracts         Contract[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+enum UserRole {
+  free
+  pro
+  enterprise
+}
+
+model Contract {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  highlights Json[]  // Stores Highlight[]
+  changes   Json[]   // Stores AIChange[]
+  status    ContractStatus @default(draft)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum ContractStatus {
+  draft
+  under_review
+  approved
+  rejected
+}

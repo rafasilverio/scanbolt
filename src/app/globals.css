@@ -67,3 +67,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes flash {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(59, 130, 246, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.flash-highlight {
+  animation: flash 1s ease-out;
+}

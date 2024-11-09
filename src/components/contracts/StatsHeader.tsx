@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   TrendingUp,
   Share2,
+  FileText,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,160 +19,82 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface StatsHeaderProps {
   contract: Contract;
-  onIssueClick: (type: HighlightType) => void;
+  onIssueClick: (highlight: Highlight) => void;
+  selectedIssueType: HighlightType | null;
+  onGenerateContract: () => void;
 }
 
-export function StatsHeader({ contract, onIssueClick }: StatsHeaderProps) {
+export function StatsHeader({
+  contract,
+  onIssueClick,
+  selectedIssueType,
+  onGenerateContract
+}: StatsHeaderProps) {
   const stats = {
-    critical: contract.highlights?.filter((h) => h.type === "critical")?.length || 0,
-    warning: contract.highlights?.filter((h) => h.type === "warning")?.length || 0,
-    improvement: contract.highlights?.filter((h) => h.type === "improvement")?.length || 0,
+    critical: contract.highlights.filter(h => h.type === 'critical').length,
+    warning: contract.highlights.filter(h => h.type === 'warning').length,
+    improvement: contract.highlights.filter(h => h.type === 'improvement').length,
   };
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+  const handleTypeClick = (type: HighlightType) => {
+    const highlightsOfType = contract.highlights.filter(h => h.type === type);
+    if (highlightsOfType.length > 0) {
+      onIssueClick(highlightsOfType[0]);
     }
   };
 
-  const item = {
-    hidden: { y: 20, opacity: 0 },
-    show: { y: 0, opacity: 1 }
-  };
-
   return (
-    <TooltipProvider>
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="space-y-4"
-      >
-        {/* Title and Actions Row */}
-        <div className="flex items-center justify-between">
-          <motion.h1 
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            className="text-xl font-bold"
-          >
-            {contract.title}
-          </motion.h1>
-          <motion.div 
-            initial={{ x: 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            className="flex items-center gap-4"
-          >
-            <p className="text-sm text-muted-foreground">
-              Last updated: {new Date(contract.updatedAt).toLocaleDateString()}
-            </p>
-            <Button variant="outline" size="sm">
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
-            </Button>
-          </motion.div>
-        </div>
-
-        {/* Stats Cards Row */}
-        <motion.div 
-          variants={container}
-          className="grid grid-cols-4 gap-4"
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant={selectedIssueType === 'critical' ? 'default' : 'outline'}
+          className={cn(
+            "h-8 px-3 gap-2",
+            selectedIssueType === 'critical' 
+              ? 'bg-red-500 hover:bg-red-600 text-white' 
+              : 'text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700'
+          )}
+          onClick={() => handleTypeClick('critical')}
         >
-          {/* Total Issues Card */}
-          <motion.div variants={item}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card 
-                  className="p-4 hover:shadow-lg transition-shadow cursor-pointer group"
-                  onClick={() => onIssueClick('critical')}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Issues</p>
-                      <p className="text-2xl font-bold">
-                        {stats.critical + stats.warning + stats.improvement}
-                      </p>
-                    </div>
-                    <TrendingUp className="h-8 w-8 text-brand-primary opacity-50 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>Click to view all issues</TooltipContent>
-            </Tooltip>
-          </motion.div>
+          <AlertCircle className="h-4 w-4" />
+          {stats.critical} Critical
+        </Button>
 
-          {/* Critical Issues Card */}
-          <motion.div variants={item}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card 
-                  className="p-4 border-red-200 hover:shadow-lg transition-shadow cursor-pointer group"
-                  onClick={() => onIssueClick('critical')}
-                >
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="h-8 w-8 text-red-500 opacity-50 group-hover:opacity-100 transition-opacity" />
-                    <div>
-                      <p className="text-sm text-red-700">Critical Issues</p>
-                      <p className="text-2xl font-bold text-red-700">{stats.critical}</p>
-                    </div>
-                  </div>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>Click to view critical issues</TooltipContent>
-            </Tooltip>
-          </motion.div>
+        <Button
+          size="sm"
+          variant={selectedIssueType === 'warning' ? 'default' : 'outline'}
+          className={cn(
+            "h-8 px-3 gap-2",
+            selectedIssueType === 'warning' 
+              ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
+              : 'text-yellow-600 border-yellow-200 hover:bg-yellow-50 hover:text-yellow-700'
+          )}
+          onClick={() => handleTypeClick('warning')}
+        >
+          <AlertTriangle className="h-4 w-4" />
+          {stats.warning} Warnings
+        </Button>
 
-          {/* Warning Card */}
-          <motion.div variants={item}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card 
-                  className="p-4 border-yellow-200 hover:shadow-lg transition-shadow cursor-pointer group"
-                  onClick={() => onIssueClick('warning')}
-                >
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-8 w-8 text-yellow-500 opacity-50 group-hover:opacity-100 transition-opacity" />
-                    <div>
-                      <p className="text-sm text-yellow-700">Warnings</p>
-                      <p className="text-2xl font-bold text-yellow-700">{stats.warning}</p>
-                    </div>
-                  </div>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>Click to view warnings</TooltipContent>
-            </Tooltip>
-          </motion.div>
-
-          {/* Improvements Card */}
-          <motion.div variants={item}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card 
-                  className="p-4 border-green-200 hover:shadow-lg transition-shadow cursor-pointer group"
-                  onClick={() => onIssueClick('improvement')}
-                >
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-8 w-8 text-green-500 opacity-50 group-hover:opacity-100 transition-opacity" />
-                    <div>
-                      <p className="text-sm text-green-700">Improvements</p>
-                      <p className="text-2xl font-bold text-green-700">
-                        {stats.improvement}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>Click to view improvements</TooltipContent>
-            </Tooltip>
-          </motion.div>
-        </motion.div>
-      </motion.div>
-    </TooltipProvider>
+        <Button
+          size="sm"
+          variant={selectedIssueType === 'improvement' ? 'default' : 'outline'}
+          className={cn(
+            "h-8 px-3 gap-2",
+            selectedIssueType === 'improvement' 
+              ? 'bg-green-500 hover:bg-green-600 text-white' 
+              : 'text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700'
+          )}
+          onClick={() => handleTypeClick('improvement')}
+        >
+          <Lightbulb className="h-4 w-4" />
+          {stats.improvement} Improvements
+        </Button>
+      </div>
+    </div>
   );
 }
