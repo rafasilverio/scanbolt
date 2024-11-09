@@ -1,14 +1,12 @@
-import type { Config } from "tailwindcss";
-
-const config = {
+/** @type {import('tailwindcss').Config} */
+module.exports = {
   darkMode: ["class"],
   content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
-  ],
-  prefix: "",
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+	],
   theme: {
     container: {
       center: true,
@@ -19,39 +17,45 @@ const config = {
     },
     extend: {
       colors: {
-        primary: {
-          DEFAULT: "#4d00fc",
-          dark: "#30008f",
-          darker: "#240063",
+        brand: {
+          primary: "#4d00fc",    // Main purple
+          white: "#fefefe",      // White
+          darker: "#240063",     // Darkest purple
+          dark: "#30008f",       // Dark purple
+          warning: "#FFB800",    // Yellow for warnings/notices
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "#4d00fc",    // Using exact brand color
+          foreground: "#fefefe", // Using brand white
+        },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "#30008f",    // Using brand dark
+          foreground: "#fefefe", // Using brand white
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "#ef4444",    // Red for critical issues
+          foreground: "#fefefe",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "#f3f4f6",    // Light gray
+          foreground: "#6b7280",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "#240063",    // Using brand darker
+          foreground: "#fefefe",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "#fefefe",
+          foreground: "#240063",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "#fefefe",
+          foreground: "#240063",
         },
       },
       borderRadius: {
@@ -61,12 +65,12 @@ const config = {
       },
       keyframes: {
         "accordion-down": {
-          from: { height: "0" },
+          from: { height: 0 },
           to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
+          to: { height: 0 },
         },
       },
       animation: {
@@ -76,6 +80,4 @@ const config = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config;
-
-export default config;
+}
