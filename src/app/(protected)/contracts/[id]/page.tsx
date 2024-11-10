@@ -1,11 +1,44 @@
 "use client";
 
+import { useEffect, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import ContractViewer from "@/components/contracts/ContractViewer";
-import { ContractRevision } from "@/components/contracts/ContractRevision";
+import ContractRevision from "@/components/contracts/ContractRevision";
+import { useParams } from 'next/navigation';
 import { mockContract } from "@/lib/mock-data";
+import { Contract } from '@prisma/client';
 
 export default function ContractPage() {
+  const params = useParams();
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContract = async () => {
+      try {
+        const response = await fetch(`/api/contracts/${params.id}`);
+        const data = await response.json();
+        setContract(data.contract);
+      } catch (error) {
+        console.error('Error fetching contract:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (params.id) {
+      fetchContract();
+    }
+  }, [params.id]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!contract) {
+    return <div>Contract not found</div>;
+  }
+
   return (
     <div className="h-full">
       <Tabs.Root defaultValue="review" className="h-full">

@@ -3,9 +3,11 @@ export type UserRole = 'free' | 'pro' | 'enterprise';
 export interface User {
   id: string;
   email: string;
-  name?: string;
+  name?: string | null;
   role: UserRole;
-  createdAt: string;
-  updatedAt: string;
-  contractsRemaining: number; // For free tier limits
+  contractsRemaining: number;
+  image?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  contracts?: Contract[];
 }

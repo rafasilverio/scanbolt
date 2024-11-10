@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { Contract } from "@/types/contract";
+import { Contract, Highlight, HighlightType } from '@/types/contract';
+
 import {
   AlertCircle,
   AlertTriangle,

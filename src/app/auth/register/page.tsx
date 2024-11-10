@@ -1,7 +1,7 @@
 'use client';
 
+import { signIn } from "next-auth/react";
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Check } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import bcryptjs from 'bcryptjs';
+import Image from 'next/image';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,36 +21,47 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleGoogleSignIn = async () => {
-    try {
-      await signIn('google', {
-        callbackUrl: '/dashboard',
-        redirect: true,
-        role: selectedPlan,
-      });
-    } catch (error) {
-      setError('Failed to sign in with Google');
-    }
+  const handleGoogleSignIn = () => {
+    signIn('google', { callbackUrl: '/dashboard' });
   };
-
+  
   const handleEmailRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        role: selectedPlan,
-        contractsRemaining: selectedPlan === 'free' ? 3 : -1,
-        redirect: false,
-        isRegistration: true,
+      // Register user through API
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          selectedPlan
+        })
       });
 
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        router.push('/dashboard');
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error);
+        return;
       }
+
+      // Sign in after successful registration
+      const signInResult = await signIn('credentials', {
+        email,
+        password,
+        redirect: false
+      });
+
+      if (signInResult?.error) {
+        setError('Failed to sign in after registration');
+        return;
+      }
+
+      router.push('/dashboard');
+
     } catch (error) {
+      console.error('Registration error:', error);
       setError('Registration failed');
     }
   };
@@ -160,7 +174,7 @@ export default function RegisterPage() {
             variant="outline"
             className="w-full h-12 flex items-center justify-center gap-3 text-base"
           >
-            <img src="/google.svg" alt="Google" className="w-5 h-5" />
+            <Image src="/google.svg" alt="Google" width={20} height={20} />
             Continue with Google
           </Button>
 
@@ -199,9 +213,9 @@ export default function RegisterPage() {
 
           <div className="flex items-center gap-6">
             <div className="flex -space-x-4">
-              <img src="/testimonial-1.jpg" alt="" className="w-12 h-12 rounded-full border-2 border-white" />
-              <img src="/testimonial-2.jpg" alt="" className="w-12 h-12 rounded-full border-2 border-white" />
-              <img src="/testimonial-3.jpg" alt="" className="w-12 h-12 rounded-full border-2 border-white" />
+              <Image src="/testimonial-1.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white -mr-4" />
+              <Image src="/testimonial-2.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white -mr-4" />
+              <Image src="/testimonial-3.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
             </div>
             <p className="text-sm">Join thousands of legal professionals using our platform</p>
           </div>

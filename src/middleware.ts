@@ -11,9 +11,11 @@ export default withAuth(
       if (token) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
+      console.log('Middleware - Request path insidei f:', req.nextUrl.pathname);
       return NextResponse.next();
     }
 
+    console.log('Middleware - Request path:', req.nextUrl.pathname);
     return NextResponse.next();
   },
   {
@@ -37,5 +39,6 @@ export const config = {
     '/dashboard/:path*',
     '/contracts/:path*',
     '/api/protected/:path*',
+    '/api/:path*',
   ],
 };

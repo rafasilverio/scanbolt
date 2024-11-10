@@ -1,22 +1,29 @@
 "use client";
 
-import { useContractStore } from '@/lib/store/contract-store';
 import { useRouter } from 'next/navigation';
+import { useContractStore } from '@/lib/store/contract-store';
 import { useEffect } from 'react';
-import { ContractRevision } from '@/components/contracts/ContractRevision';
+import ContractRevision from '@/components/contracts/ContractRevision';
 
-export default function RevisionPage({ params }: { params: { id: string } }) {
+export default function ContractRevisionPage() {
   const router = useRouter();
-  const hasGeneratedRevision = useContractStore(state => state.hasGeneratedRevision);
-  const contract = useContractStore(state => state.contract);
+  const { contract, setContract, generateRevision } = useContractStore();
 
   useEffect(() => {
-    if (!hasGeneratedRevision) {
-      router.replace(`/contracts/${params.id}`);
-    }
-  }, [hasGeneratedRevision, router, params.id]);
+    const fetchAndGenerateRevision = async () => {
+      try {
+        await generateRevision();
+      } catch (error) {
+        console.error('Error generating revision:', error);
+      }
+    };
 
-  if (!hasGeneratedRevision) {
+    if (contract) {
+      fetchAndGenerateRevision();
+    }
+  }, [contract, generateRevision]);
+
+  if (!contract) {
     return null;
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Contract, Highlight, HighlightType, AIChange } from '@/types/contract';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
@@ -30,19 +30,25 @@ import { cn } from "@/lib/utils";
 import { useContractStore } from '@/lib/store/contract-store';
 
 interface ContractViewerProps {
-    onAddComment?: (highlightId: string, content: string) => void;
-  }
+  contract: Contract;
+  onAddComment?: (highlightId: string, content: string) => void;
+}
 
-  export default function ContractViewer({ onAddComment }: ContractViewerProps) {
-  const contract = useContractStore(state => state.contract);
+export default function ContractViewer({ contract, onAddComment }: ContractViewerProps) {
   const router = useRouter();
   const [selectedChange, setSelectedChange] = useState<AIChange | null>(null);
   const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
   const [zoom, setZoom] = useState(100);
   const [selectedIssueType, setSelectedIssueType] = useState<HighlightType | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const setContract = useContractStore(state => state.setContract);
   const hasGeneratedRevision = useContractStore(state => state.hasGeneratedRevision);
   const setHasGeneratedRevision = useContractStore(state => state.setHasGeneratedRevision);
+  const { generateRevision } = useContractStore();
+
+  useEffect(() => {
+    setContract(contract);
+  }, [contract, setContract]);
 
   const handleGenerateContract = async () => {
     setHasGeneratedRevision(true);
@@ -86,6 +92,7 @@ interface ContractViewerProps {
             contract={contract} 
             onIssueClick={handleHighlightClick}
             selectedIssueType={selectedIssueType}
+            onGenerateContract={generateRevision}
           />
           <div className="flex gap-2">
             {!hasGeneratedRevision ? (

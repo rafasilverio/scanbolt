@@ -1,7 +1,8 @@
 "use client";
 
 import { useContractStore } from '@/lib/store/contract-store';
-import { Contract, Highlight } from "@/types/contract";
+import { Contract } from '@/types/contract';
+import { Highlight } from "@/types/contract";
 import { DocumentWrapper } from "../ui/document-wrapper";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { useState, useRef } from "react";
@@ -10,8 +11,11 @@ import { ArrowLeft, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-reac
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export function ContractRevision() {
-  const contract = useContractStore(state => state.contract);
+interface ContractRevisionProps {
+  contract: Contract;
+}
+
+export function ContractRevision({ contract }: ContractRevisionProps) {
   const [zoom, setZoom] = useState(100);
   const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -206,3 +210,5 @@ export function ContractRevision() {
     </div>
   );
 }
+
+export default ContractRevision;

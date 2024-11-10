@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Upload, File as FileIcon, X, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useSession } from 'next-auth/react';
 import { ContractFileSchema } from '@/lib/validators/contract';
+import { toast } from 'sonner';
 
 export function UploadZone() {
   const { data: session } = useSession();
@@ -14,14 +15,11 @@ export function UploadZone() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const router = useRouter();
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = useCallback((selectedFile: File) => {
     setError(null);
-    const selectedFile = e.target.files?.[0];
-    
-    if (!selectedFile) return;
-
     try {
       const result = ContractFileSchema.parse({ file: selectedFile });
       setFile(result.file);
@@ -32,13 +30,43 @@ export function UploadZone() {
         setError('Invalid file');
       }
     }
+  }, []);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
   };
 
-  const handleUpload = async () => {
-    if (!file || !session?.user) return;
-    setLoading(true);
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
 
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) {
+      handleFile(droppedFile);
+    }
+  }, [handleFile]);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      handleFile(selectedFile);
+    }
+  };
+
+  const handleUpload = async (file: File) => {
     try {
+      setLoading(true);
+      setProgress(10);
+      
       const formData = new FormData();
       formData.append('file', file);
 
@@ -47,25 +75,40 @@ export function UploadZone() {
         body: formData,
       });
 
-      const data = await response.json();
+      setProgress(90);
 
-      if (data.redirect) {
-        router.push(data.redirect);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+
+      const data = await response.json();
+      setProgress(100);
+
+      if (data.success && data.contract) {
+        toast.success('Contract uploaded successfully!');
+        router.push(`/contracts/${data.contract.id}`);
       } else {
-        router.push('/dashboard');
+        throw new Error('Invalid response from server');
       }
     } catch (error) {
       console.error('Upload error:', error);
-      setError('Failed to upload contract');
+      setError(error instanceof Error ? error.message : 'Upload failed');
+      toast.error(error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setLoading(false);
+      setProgress(0);
     }
   };
 
   return (
     <div className="w-full">
       <div 
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         className={`border-2 border-dashed rounded-lg p-12 text-center ${
+          isDragging ? 'border-[#2563EB] bg-blue-50' :
           error ? 'border-red-500 bg-red-50' : 
           file ? 'border-green-500 bg-green-50' : 
           'border-gray-300 hover:border-[#2563EB] hover:bg-blue-50'
@@ -131,7 +174,7 @@ export function UploadZone() {
           )}
           <Button
             className="w-full bg-[#2563EB] hover:bg-[#1E40AF]"
-            onClick={handleUpload}
+            onClick={() => handleUpload(file)}
             disabled={loading}
           >
             {loading ? 'Processing...' : 'Analyze Contract'}

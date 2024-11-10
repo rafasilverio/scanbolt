@@ -49,10 +49,10 @@ export function Diff({ change, isSelected, onClick }: DiffProps) {
           whileTap={{ scale: 0.99 }}
         >
           <del className="bg-red-100 text-red-700 rounded px-1">
-            {change.originalText}
+            {change.originalContent}
           </del>
           <ins className="bg-green-100 text-green-700 rounded px-1 ml-1">
-            {change.suggestedText}
+            {change.content}
           </ins>
         </motion.div>
         

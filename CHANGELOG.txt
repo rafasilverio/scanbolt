@@ -1,5 +1,5 @@
 CHANGELOG - SCANCONTRACT
-Date: 2024-03-20
+Date: 2024-11-08
 Version: 0.1.0
 
 === MAJOR CHANGES ===
@@ -110,3 +110,97 @@ If you need to recover or rebuild:
 5. Test all interactive elements
 
 === END OF CHANGELOG ===
+
+CHANGELOG - SCANCONTRACT
+Date: 2024-11-09
+Version: 0.1.1
+
+=== MAJOR CHANGES ===
+
+ADDED:
+- Authentication system with NextAuth.js
+- Contract upload functionality
+- Contracts listing page
+- User role management (free/pro/enterprise)
+- Contract limits for free tier
+- File validation system
+- Session management
+- Protected routes
+
+UPDATED:
+- User types to include role and contract limits
+- NextAuth configuration with custom callbacks
+- Contract types with highlights and changes
+- Upload zone with progress tracking
+
+REMOVED:
+- Local authentication system
+- Basic file upload
+
+=== AUTHENTICATION FLOW ===
+
+IMPLEMENTED:
+1. NextAuth.js integration
+2. Session handling
+3. JWT token management
+4. Role-based access
+5. Protected routes
+6. User persistence
+
+=== CONTRACT SYSTEM ===
+
+ADDED:
+1. Contract upload endpoint
+2. File validation
+3. Contract storage
+4. User-contract relationship
+5. Contract status tracking
+6. Contract listing page
+
+=== FILE STRUCTURE ===
+
+src/
+├── app/
+│   ├── api/
+│   │   ├── auth/[...nextauth]/
+│   │   └── contracts/upload/
+│   └── (protected)/
+│       └── contracts/
+├── components/
+│   └── contracts/
+│       ├── ContractsList.tsx
+│       └── UploadZone.tsx
+└── types/
+    ├── contract.ts
+    ├── user.ts
+    └── next-auth.d.ts
+
+=== DEPENDENCIES ===
+
+ADDED:
+- @auth/prisma-adapter
+- next-auth
+- date-fns
+- prisma
+- @prisma/client
+
+=== NEXT STEPS ===
+
+TODO:
+1. Implement AI analysis for contracts
+2. Add contract review system
+3. Create contract comparison
+4. Add team collaboration features
+5. Implement export functionality
+6. Add contract templates
+7. Create billing system
+
+=== TESTING CHECKLIST ===
+
+[x] Authentication flow works
+[x] File upload functions correctly
+[x] Contract listing displays properly
+[x] User roles are enforced
+[x] Protected routes work
+[x] Session persistence
+[x] File validation

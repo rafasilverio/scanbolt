@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -48,7 +49,7 @@ export default function LoginPage() {
             variant="outline"
             className="w-full h-12 flex items-center justify-center gap-3 text-base"
           >
-            <img src="/google.svg" alt="Google" className="w-5 h-5" />
+            <Image src="/google.svg" alt="Google" width={20} height={20} />
             Continue with Google
           </Button>
 
@@ -96,7 +97,7 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-sm">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/auth/register" className="text-[#5000f7] hover:text-[#4000d7] font-medium">
               Sign up for free
             </Link>
@@ -112,7 +113,7 @@ export default function LoginPage() {
             
             <div className="space-y-8">
               <blockquote className="space-y-4">
-                <p className="text-lg">"This platform has revolutionized our contract review process. We've reduced review time by 75% while improving accuracy."</p>
+                <p className="text-lg">&quot;This platform has revolutionized our contract review process. We&apos;ve reduced review time by 75% while improving accuracy.&quot;</p>
                 <footer className="text-sm">
                   <cite className="font-medium">Sarah Chen</cite>
                   <p>Legal Director, TechCorp Inc.</p>
@@ -120,7 +121,7 @@ export default function LoginPage() {
               </blockquote>
 
               <blockquote className="space-y-4">
-                <p className="text-lg">"The AI-powered analysis catches issues that could easily be missed. It's like having an extra senior partner reviewing every document."</p>
+                <p className="text-lg">&quot;The AI-powered analysis catches issues that could easily be missed. It&apos;s like having an extra senior partner reviewing every document.&quot;</p>
                 <footer className="text-sm">
                   <cite className="font-medium">Michael Rodriguez</cite>
                   <p>Managing Partner, Rodriguez & Associates</p>
@@ -131,9 +132,9 @@ export default function LoginPage() {
 
           <div className="flex items-center gap-6">
             <div className="flex -space-x-4">
-              <img src="/testimonial-1.jpg" alt="" className="w-12 h-12 rounded-full border-2 border-white" />
-              <img src="/testimonial-2.jpg" alt="" className="w-12 h-12 rounded-full border-2 border-white" />
-              <img src="/testimonial-3.jpg" alt="" className="w-12 h-12 rounded-full border-2 border-white" />
+              <Image src="/testimonial-1.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
+              <Image src="/testimonial-2.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
+              <Image src="/testimonial-3.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
             </div>
             <p className="text-sm">Join thousands of legal professionals using our platform</p>
           </div>

@@ -12,8 +12,12 @@ export interface Highlight {
 export interface AIChange {
   id: string;
   content: string;
+  originalContent: string;
+  explanation: string;
   suggestion: string;
-  type: HighlightType;
+  status: 'accepted' | 'rejected' | 'pending';
+  reason: string;
+  type: 'critical' | 'warning' | 'improvement';
   startIndex: number;
   endIndex: number;
 }

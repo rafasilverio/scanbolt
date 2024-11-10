@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import type { Contract, User } from '@/types/contract';
+import type { Contract } from '@/types/contract';
+import type { User } from '@/types/user';
 
 export function useDatabase() {
   const createUser = useCallback(async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
