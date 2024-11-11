@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = () => {
     signIn('google', { callbackUrl: '/dashboard' });
@@ -27,6 +28,9 @@ export default function RegisterPage() {
   
   const handleEmailRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
     try {
       // Register user through API
       const res = await fetch('/api/auth/register', {
@@ -43,6 +47,7 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         setError(data.error);
+        setIsLoading(false);
         return;
       }
 
@@ -55,6 +60,7 @@ export default function RegisterPage() {
 
       if (signInResult?.error) {
         setError('Failed to sign in after registration');
+        setIsLoading(false);
         return;
       }
 
@@ -63,6 +69,7 @@ export default function RegisterPage() {
     } catch (error) {
       console.error('Registration error:', error);
       setError('Registration failed');
+      setIsLoading(false);
     }
   };
 
@@ -141,6 +148,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -152,11 +160,16 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
 
-            <Button type="submit" className="w-full h-12 text-base bg-[#5000f7] hover:bg-[#4000d7]">
-              Create Account
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base bg-[#5000f7] hover:bg-[#4000d7]"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating account..." : "Create Account"}
             </Button>
           </form>
 
@@ -173,6 +186,7 @@ export default function RegisterPage() {
             onClick={handleGoogleSignIn}
             variant="outline"
             className="w-full h-12 flex items-center justify-center gap-3 text-base"
+            disabled={isLoading}
           >
             <Image src="/google.svg" alt="Google" width={20} height={20} />
             Continue with Google

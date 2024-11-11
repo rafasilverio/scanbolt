@@ -44,7 +44,12 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             email: user.email,
             name: user.name || null,
-            image: null
+            role: user.role,
+            contracts_remaining: user.contracts_remaining,
+            image: null,
+            provider: 'credentials',
+            createdAt: user.created_at,
+            updatedAt: user.updated_at
           };
         } catch (error) {
           console.error('Authorization error:', error);
@@ -66,7 +71,6 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
-        session.user.contracts_remaining = token.contracts_remaining;
       }
       return session;
     }
