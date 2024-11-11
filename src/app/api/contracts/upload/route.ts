@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import  prisma  from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import crypto from 'crypto';
@@ -16,6 +16,9 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// Create a new instance for this route
+const prisma = new PrismaClient();
 
 async function summarizeText(text: string): Promise<string> {
   try {
@@ -195,10 +198,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await prisma.$transaction(async (tx) => {
-      return await tx.user.findUnique({
-        where: { email: session.user.email }
-      });
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
     });
 
     if (!user) {
@@ -212,13 +214,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Extract text content
+    // Extract text and analyze
     const extractedText = await extractTextContent(file);
-    
-    // Analyze contract
     const { highlights, changes } = await analyzeContract(extractedText);
 
-    // Upload file to Supabase
+    // Upload to Supabase
     const fileName = `${Date.now()}-${file.name}`;
     const buffer = await file.arrayBuffer();
 
@@ -237,22 +237,24 @@ export async function POST(req: NextRequest) {
       .from('contracts')
       .getPublicUrl(data.path);
 
-    const contract = await prisma.$transaction(async (tx) => {
-      return await tx.contract.create({
-        data: {
-          id: crypto.randomUUID(),
-          title: file.name,
-          fileUrl: publicUrl,
-          fileName: file.name,
-          status: "under_review",
-          fileType: file.type,
-          content: extractedText,
-          highlights: JSON.stringify(highlights),
-          changes: JSON.stringify(changes),
-          userId: user.id
-        }
-      });
+    // Create contract without transaction
+    const contract = await prisma.contract.create({
+      data: {
+        id: crypto.randomUUID(),
+        title: file.name,
+        fileUrl: publicUrl,
+        fileName: file.name,
+        status: "under_review",
+        fileType: file.type,
+        content: extractedText,
+        highlights: JSON.stringify(highlights),
+        changes: JSON.stringify(changes),
+        userId: user.id
+      }
     });
+
+    // Disconnect prisma
+    await prisma.$disconnect();
 
     return NextResponse.json({
       success: true,
@@ -264,10 +266,16 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Server error:', error);
+    // Make sure to disconnect even on error
+    await prisma.$disconnect();
+    
+    console.error('Upload error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { error: 'Failed to upload contract' },
       { status: 500 }
     );
+  } finally {
+    // Extra safety to ensure disconnection
+    await prisma.$disconnect();
   }
 }
