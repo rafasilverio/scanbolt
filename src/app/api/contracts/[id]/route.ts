@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
-import  prisma  from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+
+const prisma = new PrismaClient();
 
 export async function GET(
   request: Request,
@@ -17,21 +19,20 @@ export async function GET(
       );
     }
 
-    const contract = await prisma.$transaction(async (tx) => {
-      return await tx.contract.findUnique({
-        where: {
-          id: params.id
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true
-            }
+    // Simple findUnique without transaction
+    const contract = await prisma.contract.findUnique({
+      where: {
+        id: params.id
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true
           }
         }
-      });
+      }
     });
 
     if (!contract) {
@@ -49,14 +50,18 @@ export async function GET(
       );
     }
 
+    await prisma.$disconnect();
     return NextResponse.json(contract);
 
   } catch (error) {
     console.error('Server error:', error);
+    await prisma.$disconnect();
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -72,25 +77,28 @@ export async function PATCH(
 
     const body = await req.json();
     
-    const updatedContract = await prisma.$transaction(async (tx) => {
-      return await tx.contract.update({
-        where: { id: params.id },
-        data: {
-          status: body.status,
-          updatedAt: new Date(),
-        },
-      });
+    // Simple update without transaction
+    const updatedContract = await prisma.contract.update({
+      where: { id: params.id },
+      data: {
+        status: body.status,
+        updatedAt: new Date(),
+      },
     });
 
+    await prisma.$disconnect();
     return NextResponse.json({
       success: true,
       contract: updatedContract,
     });
   } catch (error) {
     console.error('Error updating contract:', error);
+    await prisma.$disconnect();
     return NextResponse.json(
       { error: 'Failed to update contract' },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
