@@ -5,6 +5,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import crypto from 'crypto';
 import OpenAI from 'openai';
+import { Highlight, AIChange } from '@/types/contract';
+
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

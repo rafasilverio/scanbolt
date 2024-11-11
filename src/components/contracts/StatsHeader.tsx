@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { Contract, Highlight, HighlightType } from '@/types/contract';
+import { Contract, Highlight, HighlightType, AIChange } from '@/types/contract';
 import { useMemo } from 'react';
 
 import {
@@ -58,15 +58,15 @@ export default function StatsHeader({ contract, onIssueClick, selectedIssueType 
   })();
 
   // Count all types of highlights using lowercase comparison
-  const warningCount = highlights.filter(h => 
+  const warningCount = highlights.filter((h: Highlight) => 
     h.type?.toLowerCase() === 'warning'
   ).length;
 
-  const dangerCount = highlights.filter(h => 
+  const dangerCount = highlights.filter((h: Highlight) => 
     h.type?.toLowerCase() === 'critical'
   ).length;
 
-  const improvementCount = highlights.filter(h => 
+  const improvementCount = highlights.filter((h: Highlight) => 
     h.type?.toLowerCase() === 'improvement'
   ).length;
 

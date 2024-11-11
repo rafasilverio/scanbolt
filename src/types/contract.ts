@@ -32,7 +32,7 @@ export interface Contract {
   changes: AIChange[];
   createdAt: string;
   updatedAt: string;
-  status: 'draft' | 'under_review' | 'approved' | 'rejected';
+  status: 'draft' | 'under_review' | 'approved' | 'rejected' | 'generating';
 }
 
 // Example contract with 25 issues

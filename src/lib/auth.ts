@@ -43,7 +43,10 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-          contracts_remaining: user.contracts_remaining
+          contracts_remaining: user.contracts_remaining,
+          provider: 'credentials',
+          createdAt: user.created_at,
+          updatedAt: user.updated_at
         };
       }
     })
@@ -94,7 +97,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/auth/login',
-    signUp: '/auth/register',
+    // signUp: '/auth/register',
     error: '/auth/error'
   },
   session: {

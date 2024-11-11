@@ -101,6 +101,7 @@ export default function ContractViewer({
   const isApproved = storeContract?.status === 'approved';
 
   const handleViewRevision = () => {
+    if (!storeContract) return;
     router.push(`/contracts/${storeContract.id}/revision`);
   };
 
@@ -174,6 +175,8 @@ export default function ContractViewer({
 
   const handleGenerateRevision = async () => {
     try {
+      if (!storeContract) return;
+      
       setContract({ ...storeContract, status: 'generating' });
 
       const response = await fetch(`/api/contracts/${storeContract.id}/revision`, {
@@ -206,7 +209,7 @@ export default function ContractViewer({
     } catch (error) {
       console.error('Error generating revision:', error);
       // Reset status on error
-      setContract({ ...storeContract, status: 'under_review' });
+      setContract({ ...storeContract!, status: 'under_review' });
     }
   };
 
@@ -335,9 +338,9 @@ export default function ContractViewer({
               transition: 'transform 0.2s ease-in-out'
             }}
           >
-            <DocumentWrapper contract={storeContract}>
+            <DocumentWrapper contract={storeContract || undefined}>
               <ContractContent
-                contract={storeContract}
+                contract={storeContract || undefined}
                 selectedHighlight={selectedHighlight}
                 selectedChange={selectedChange}
                 onChangeSelect={setSelectedChange}

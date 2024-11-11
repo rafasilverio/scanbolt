@@ -299,6 +299,7 @@ export function ContractRevision({ contract: initialContract }: ContractRevision
           zoom={zoom}
           onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
           onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
+          onZoomReset={() => setZoom(100)}
         />
       </div>
     </div>

@@ -5,7 +5,7 @@ import { Contract, AIChange, Highlight } from "@/types/contract";
 import { cn } from "@/lib/utils";
 
 interface ContractContentProps {
-  contract: Contract;
+  contract?: Contract;
   selectedHighlight: Highlight | null;
   selectedChange: AIChange | null;
   onChangeSelect: (change: AIChange | null) => void;
