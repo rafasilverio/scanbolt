@@ -20,7 +20,7 @@ export function AuthStatus() {
         {JSON.stringify({
           email: session?.user?.email,
           role: session?.user?.role || 'free',
-          contractsRemaining: session?.user?.contractsRemaining || 3,
+          contracts_remaining: session?.user?.contracts_remaining || 3,
         }, null, 2)}
       </pre>
     </div>
