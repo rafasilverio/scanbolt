@@ -59,6 +59,8 @@ and
 IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written.
 
 [SIGNATURES]`,
+  fileUrl: "/mock-contract.pdf",
+  fileType: "application/pdf",
   highlights: [
     // Critical Issues (8)
     {
