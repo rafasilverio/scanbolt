@@ -1,7 +1,7 @@
 {
   "functions": {
-    "app/api/contracts/upload/route.ts": {
-      "maxDuration": 300
+    "api/**/*.ts": {
+      "memory": 1024
     }
   }
 } 
