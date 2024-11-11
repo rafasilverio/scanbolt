@@ -1,3 +1,5 @@
+import { Contract } from './contract';
+
 export type UserRole = 'free' | 'pro' | 'enterprise';
 
 export interface User {
