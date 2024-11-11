@@ -149,7 +149,7 @@ Make sure to use the exact position of each issue in the text using string index
       response_format: { type: "json_object" }
     });
 
-    const response = await Promise.race([analysisPromise, timeoutPromise]);
+    const response = await Promise.race([analysisPromise, timeoutPromise]) as OpenAI.Chat.Completions.ChatCompletion;
 
     let analysis;
     try {

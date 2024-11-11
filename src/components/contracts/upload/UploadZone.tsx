@@ -77,9 +77,9 @@ export function UploadZone() {
 
       const data = await response.json();
       return data;
-    } catch (error) {
-      console.error('Upload error:', error);
-      throw new Error(error.message || 'Failed to upload contract');
+    } catch (err) {
+      console.error('Upload error:', err);
+      throw new Error(err instanceof Error ? err.message : 'Failed to upload contract');
     }
   };
 
