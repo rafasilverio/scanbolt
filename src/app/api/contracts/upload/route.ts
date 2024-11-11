@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { prisma } from '@/lib/prisma';
+import  prisma  from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import crypto from 'crypto';
@@ -195,13 +195,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    const user = await prisma.$transaction(async (tx) => {
+      return await tx.user.findUnique({
+        where: { email: session.user.email }
+      });
     });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
     const formData = await req.formData();
     const file = formData.get('file') as File;
@@ -235,19 +233,21 @@ export async function POST(req: NextRequest) {
       .from('contracts')
       .getPublicUrl(data.path);
 
-    const contract = await prisma.contract.create({
-      data: {
-        id: crypto.randomUUID(),
-        title: file.name,
-        fileUrl: publicUrl,
-        fileName: file.name,
-        status: "under_review",
-        fileType: file.type,
-        content: extractedText,
-        highlights: JSON.stringify(highlights),
-        changes: JSON.stringify(changes),
-        userId: user.id
-      }
+    const contract = await prisma.$transaction(async (tx) => {
+      return await tx.contract.create({
+        data: {
+          id: crypto.randomUUID(),
+          title: file.name,
+          fileUrl: publicUrl,
+          fileName: file.name,
+          status: "under_review",
+          fileType: file.type,
+          content: extractedText,
+          highlights: JSON.stringify(highlights),
+          changes: JSON.stringify(changes),
+          userId: user.id
+        }
+      });
     });
 
     return NextResponse.json({

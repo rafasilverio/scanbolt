@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import  prisma  from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
@@ -17,19 +17,21 @@ export async function GET(
       );
     }
 
-    const contract = await prisma.contract.findUnique({
-      where: {
-        id: params.id
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true
+    const contract = await prisma.$transaction(async (tx) => {
+      return await tx.contract.findUnique({
+        where: {
+          id: params.id
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true
+            }
           }
         }
-      }
+      });
     });
 
     if (!contract) {
@@ -70,12 +72,14 @@ export async function PATCH(
 
     const body = await req.json();
     
-    const updatedContract = await prisma.contract.update({
-      where: { id: params.id },
-      data: {
-        status: body.status,
-        updatedAt: new Date(),
-      },
+    const updatedContract = await prisma.$transaction(async (tx) => {
+      return await tx.contract.update({
+        where: { id: params.id },
+        data: {
+          status: body.status,
+          updatedAt: new Date(),
+        },
+      });
     });
 
     return NextResponse.json({

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import  prisma  from '@/lib/prisma';
 import { AIChange, Highlight } from '@/types/contract';
 import OpenAI from 'openai';
 import crypto from 'crypto';
@@ -69,14 +69,18 @@ export async function POST(
     }
 
     // Set status to under_review immediately
-    await prisma.contract.update({
-      where: { id: params.id },
-      data: { status: 'under_review' }
+    await prisma.$transaction(async (tx) => {
+      await tx.contract.update({
+        where: { id: params.id },
+        data: { status: 'under_review' }
+      });
     });
 
     // Get existing contract with current highlights and changes
-    const existingContract = await prisma.contract.findUnique({
-      where: { id: params.id }
+    const existingContract = await prisma.$transaction(async (tx) => {
+      return await tx.contract.findUnique({
+        where: { id: params.id }
+      });
     });
 
     if (!existingContract) {
@@ -187,15 +191,17 @@ Contract to improve: ${intermediateContent}`
     ];
 
     // After AI processing, update the contract with new content and set to approved
-    const revisionContract = await prisma.contract.update({
-      where: { id: params.id },
-      data: {
-        content: aiResponse.finalContent,
-        highlights: JSON.stringify(newHighlights),
-        changes: JSON.stringify(newChanges),
-        status: 'approved',
-        updatedAt: new Date()
-      }
+    const revisionContract = await prisma.$transaction(async (tx) => {
+      return await tx.contract.update({
+        where: { id: params.id },
+        data: {
+          content: aiResponse.finalContent,
+          highlights: JSON.stringify(newHighlights),
+          changes: JSON.stringify(newChanges),
+          status: 'approved',
+          updatedAt: new Date()
+        }
+      });
     });
 
     // Return immediately after saving the new content
@@ -213,12 +219,14 @@ Contract to improve: ${intermediateContent}`
     console.error('Error in revision generation:', error);
     
     // Revert to original state on error
-    await prisma.contract.update({
-      where: { id: params.id },
-      data: {
-        status: 'under_review',
-        updatedAt: new Date()
-      }
+    await prisma.$transaction(async (tx) => {
+      await tx.contract.update({
+        where: { id: params.id },
+        data: {
+          status: 'under_review',
+          updatedAt: new Date()
+        }
+      });
     });
 
     return NextResponse.json(

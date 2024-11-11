@@ -7,7 +7,7 @@ import { Upload, FileText, Clock, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
-import { prisma } from '@/lib/prisma';
+import  prisma  from '@/lib/prisma';
 
 interface Contract {
   id: string;
@@ -26,8 +26,13 @@ export default function DashboardPage() {
       try {
         const response = await fetch('/api/contracts/recent');
         const data = await response.json();
-        if (data.contracts) {
+        
+        console.log('API Response:', data);
+        
+        if (Array.isArray(data.contracts)) {
           setRecentContracts(data.contracts);
+        } else {
+          console.error('Invalid contracts data:', data);
         }
       } catch (error) {
         console.error('Error fetching recent contracts:', error);

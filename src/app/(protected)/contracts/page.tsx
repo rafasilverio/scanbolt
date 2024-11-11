@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import  prisma  from '@/lib/prisma';
 import { ContractsList } from '@/components/contracts/ContractsList';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -10,27 +10,27 @@ import Link from 'next/link';
 export default async function ContractsPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email) {
+  if (!session) {
     redirect('/auth/login');
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      email: session.user.email
-    }
-  });
+  const { user, contracts } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: {
+        email: session.user.email
+      }
+    });
 
-  if (!user) {
-    redirect('/auth/login');
-  }
+    const contracts = await tx.contract.findMany({
+      where: {
+        userId: user.id
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
-  const contracts = await prisma.contract.findMany({
-    where: {
-      userId: user.id
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
+    return { user, contracts };
   });
 
   return (

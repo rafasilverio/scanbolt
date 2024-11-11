@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import  prisma  from '@/lib/prisma';
 
 export async function GET(request: Request) {
   try {
@@ -10,22 +10,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const contracts = await prisma.contract.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    const contracts = await prisma.$transaction(async (tx) => {
+      return await tx.contract.findMany({
+        where: {
+          userId: session.user.id,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
           }
         }
-      }
+      });
     });
 
     return NextResponse.json({ contracts });
