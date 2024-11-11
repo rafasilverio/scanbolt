@@ -7,6 +7,8 @@ import crypto from 'crypto';
 import OpenAI from 'openai';
 import { Highlight, AIChange } from '@/types/contract';
 
+export const maxDuration = 300; // Set max duration to 300 seconds (5 minutes)
+export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -55,7 +57,15 @@ async function extractTextContent(file: File): Promise<string> {
 
 async function analyzeContract(text: string): Promise<{ highlights: Highlight[], changes: AIChange[] }> {
   try {
-    const response = await openai.chat.completions.create({
+    // Add timeout for OpenAI call
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI timeout')), 60000);
+    });
+
+    const analysisPromise = openai.chat.completions.create({
+      // Reduce tokens to speed up response
+      max_tokens: 2000, // Reduced from 4000
+      temperature: 0.1,
       model: "gpt-4o",
       messages: [
         {
@@ -136,10 +146,10 @@ Make sure to use the exact position of each issue in the text using string index
           Contract to analyze: ${text}`
         }
       ],
-      temperature: 0.1,
-      max_tokens: 4000,
       response_format: { type: "json_object" }
     });
+
+    const response = await Promise.race([analysisPromise, timeoutPromise]);
 
     let analysis;
     try {
@@ -181,8 +191,8 @@ Make sure to use the exact position of each issue in the text using string index
       highlights: [{
         id: crypto.randomUUID(),
         type: 'warning',
-        message: 'Unable to perform complete analysis',
-        suggestion: 'Please review the document manually or try analysis again',
+        message: 'Analysis timeout - please try again',
+        suggestion: 'Upload a smaller document or try again later',
         startIndex: 0,
         endIndex: text.length
       }],
@@ -198,81 +208,101 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    // Add timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Request timeout'));
+      }, 250000); // 250 seconds timeout
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    // Wrap file processing in a promise
+    const processingPromise = async () => {
+      const formData = await req.formData();
+      const file = formData.get('file') as File;
 
-    const formData = await req.formData();
-    const file = formData.get('file') as File;
+      if (!file) {
+        throw new Error('No file provided');
+      }
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-    }
-
-    // Extract text and analyze
-    const extractedText = await extractTextContent(file);
-    const { highlights, changes } = await analyzeContract(extractedText);
-
-    // Upload to Supabase
-    const fileName = `${Date.now()}-${file.name}`;
-    const buffer = await file.arrayBuffer();
-
-    const { data, error } = await supabase.storage
-      .from('contracts')
-      .upload(fileName, buffer, {
-        contentType: file.type,
-        upsert: false
+      // Find user
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email }
       });
 
-    if (error) {
-      throw error;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('contracts')
-      .getPublicUrl(data.path);
-
-    // Create contract without transaction
-    const contract = await prisma.contract.create({
-      data: {
-        id: crypto.randomUUID(),
-        title: file.name,
-        fileUrl: publicUrl,
-        fileName: file.name,
-        status: "under_review",
-        fileType: file.type,
-        content: extractedText,
-        highlights: JSON.stringify(highlights),
-        changes: JSON.stringify(changes),
-        userId: user.id
+      if (!user) {
+        throw new Error('User not found');
       }
-    });
 
-    // Disconnect prisma
-    await prisma.$disconnect();
+      // Extract text and analyze
+      const extractedText = await extractTextContent(file);
+      const { highlights, changes } = await analyzeContract(extractedText);
 
-    return NextResponse.json({
-      success: true,
-      contract: {
-        ...contract,
-        highlights: JSON.parse(contract.highlights || '[]'),
-        changes: JSON.parse(contract.changes || '[]')
+      // Upload to Supabase
+      const fileName = `${Date.now()}-${file.name}`;
+      const buffer = await file.arrayBuffer();
+
+      const { data, error } = await supabase.storage
+        .from('contracts')
+        .upload(fileName, buffer, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (error) {
+        throw error;
       }
-    });
 
-  } catch (error) {
+      const { data: { publicUrl } } = supabase.storage
+        .from('contracts')
+        .getPublicUrl(data.path);
+
+      // Create contract without transaction
+      const contract = await prisma.contract.create({
+        data: {
+          id: crypto.randomUUID(),
+          title: file.name,
+          fileUrl: publicUrl,
+          fileName: file.name,
+          status: "under_review",
+          fileType: file.type,
+          content: extractedText,
+          highlights: JSON.stringify(highlights),
+          changes: JSON.stringify(changes),
+          userId: user.id
+        }
+      });
+
+      return {
+        success: true,
+        contract: {
+          ...contract,
+          highlights: JSON.parse(contract.highlights || '[]'),
+          changes: JSON.parse(contract.changes || '[]')
+        }
+      };
+    };
+
+    // Race between timeout and processing
+    const result = await Promise.race([processingPromise(), timeoutPromise]);
+    return NextResponse.json(result);
+
+  } catch (error: any) {
     // Make sure to disconnect even on error
     await prisma.$disconnect();
     
     console.error('Upload error:', error);
+    
+    // Handle specific error cases
+    if (error.message === 'No file provided') {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+    if (error.message === 'Request timeout') {
+      return NextResponse.json({ error: 'Request timed out' }, { status: 504 });
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to upload contract' },
-      { status: 500 }
+      { error: error.message || 'Failed to upload contract' },
+      { status: error.status || 500 }
     );
   } finally {
     // Extra safety to ensure disconnection

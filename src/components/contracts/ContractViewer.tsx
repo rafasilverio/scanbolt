@@ -249,7 +249,7 @@ export default function ContractViewer({
               className="bg-[#5000f7] hover:bg-[#2563EB] text-white transition-colors"
               size="default"
             >
-              Generate Full Contract
+              Generate Revised Contract
             </Button>
           ) : showViewRevisionButton ? (
             <Button 

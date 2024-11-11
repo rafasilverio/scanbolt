@@ -62,6 +62,27 @@ export function UploadZone() {
     }
   };
 
+  const uploadContract = async (formData: FormData) => {
+    try {
+      const response = await fetch('/api/contracts/upload', {
+        method: 'POST',
+        body: formData,
+        signal: AbortSignal.timeout(300000), // 5 minutes timeout
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Upload failed');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw new Error(error.message || 'Failed to upload contract');
+    }
+  };
+
   const handleUpload = async (file: File) => {
     try {
       setLoading(true);
@@ -70,18 +91,12 @@ export function UploadZone() {
       const formData = new FormData();
       formData.append('file', file);
       
-      const uploadResponse = await fetch('/api/contracts/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
+      const data = await uploadContract(formData);
 
       setProgress(50);
 
-      const data = await uploadResponse.json();
-
-      if (!uploadResponse.ok) {
-        throw new Error(data.error || 'Upload failed');
+      if (!data.success) {
+        throw new Error(data.error || 'Invalid response from server');
       }
 
       setProgress(100);

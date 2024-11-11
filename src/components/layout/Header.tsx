@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,25 +28,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 export function Header() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [contractCount, setContractCount] = useState<number | null>(null);
-
-  // Fetch contract count
-  useEffect(() => {
-    const fetchContractCount = async () => {
-      try {
-        const response = await fetch('/api/contracts/count');
-        const data = await response.json();
-        setContractCount(data.count);
-      } catch (error) {
-        console.error('Error fetching contract count:', error);
-        setContractCount(0);
-      }
-    };
-
-    if (session?.user) {
-      fetchContractCount();
-    }
-  }, [session]);
 
   const navigationItems = [
     {
@@ -60,9 +40,6 @@ export function Header() {
       title: "Contracts",
       icon: FileText,
       href: "/contracts",
-      badge: contractCount !== null ? (
-        contractCount > 0 ? contractCount.toString() : "Add Contract"
-      ) : null,
       color: "text-blue-500",
     },
     {
@@ -109,18 +86,6 @@ export function Header() {
                     isActive ? item.color : "text-current"
                   )} />
                   {item.title}
-                  {item.badge && (
-                    <span
-                      className={cn(
-                        "px-2 py-0.5 text-xs rounded-full",
-                        item.badge === "Add"
-                          ? "bg-emerald-500 text-white"
-                          : "bg-white text-[#5000f7]"
-                      )}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
                   {isActive && (
                     <motion.div
                       layoutId="activeTab"
