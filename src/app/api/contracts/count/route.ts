@@ -11,12 +11,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const count = await prisma.$transaction(async (tx) => {
-      return await tx.contract.count({
-        where: {
-          userId: session.user.id
-        }
-      });
+    const count = await prisma.contract.count({
+      where: {
+        userId: session.user.id
+      }
     });
 
     return NextResponse.json({ count });

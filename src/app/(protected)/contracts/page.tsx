@@ -23,7 +23,7 @@ export default async function ContractsPage() {
 
     const contracts = await tx.contract.findMany({
       where: {
-        userId: user.id
+        userId: user?.id
       },
       orderBy: {
         createdAt: 'desc'
