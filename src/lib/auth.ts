@@ -18,89 +18,77 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+          throw new Error("Missing credentials");
         }
 
-        // Check user in Supabase
-        const { data: user } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', credentials.email)
-          .single();
+        try {
+          // Check user in Supabase
+          const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', credentials.email)
+            .single();
 
-        if (!user) {
-          throw new Error("User not found");
+          if (error || !user) {
+            console.log('User not found:', error); // Debug log
+            throw new Error("User not found");
+          }
+
+          // Verify password
+          const validPassword = await bcryptjs.compare(credentials.password, user.password);
+          if (!validPassword) {
+            console.log('Invalid password'); // Debug log
+            throw new Error("Invalid password");
+          }
+
+          console.log('User authenticated:', { 
+            id: user.id, 
+            email: user.email,
+            role: user.role 
+          }); // Debug log
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            contracts_remaining: user.contracts_remaining
+          };
+        } catch (error) {
+          console.error('Authorization error:', error);
+          return null;
         }
-
-        // Verify password
-        const validPassword = await bcryptjs.compare(credentials.password, user.password);
-        if (!validPassword) {
-          throw new Error("Invalid password");
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          contracts_remaining: user.contracts_remaining,
-          provider: 'credentials',
-          createdAt: user.created_at,
-          updatedAt: user.updated_at
-        };
       }
     })
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider === 'google') {
-        // Check if Google user exists in Supabase
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select()
-          .eq('email', user.email)
-          .single();
-
-        if (!existingUser) {
-          // Create new user for Google sign-in
-          const { error } = await supabase.from('users').insert({
-            email: user.email,
-            name: user.name,
-            role: 'free',
-            contracts_remaining: 3,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-
-          if (error) return false;
-        }
+    async jwt({ token, user }) {
+      if (user) {
+        console.log('JWT callback - user:', user); // Debug log
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.role = user.role;
+        token.contracts_remaining = user.contracts_remaining;
       }
-      return true;
+      console.log('JWT callback - token:', token); // Debug log
+      return token;
     },
     async session({ session, token }) {
+      console.log('Session callback - token:', token); // Debug log
       if (session.user) {
-        // Get user data from Supabase
-        const { data: user } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
-
-        if (user) {
-          session.user.id = user.id;
-          session.user.role = user.role;
-          session.user.contracts_remaining = user.contracts_remaining;
-        }
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.contracts_remaining = token.contracts_remaining as number;
       }
+      console.log('Session callback - session:', session); // Debug log
       return session;
     }
   },
-  pages: {
-    signIn: '/auth/login',
-    // signUp: '/auth/register',
-    error: '/auth/error'
-  },
+  debug: true, // Enable debug mode
   session: {
-    strategy: 'jwt'
-  }
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  secret: process.env.NEXTAUTH_SECRET,
 }; 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (session) {
+      router.push('/dashboard');
+    }
+  }, [session, router]);
 
   const handleGoogleSignIn = () => {
     signIn('google', { callbackUrl: '/dashboard' });
@@ -22,15 +30,41 @@ export default function LoginPage() {
   const handleCredentialsSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
-    if (result?.error) {
-      setError('Invalid credentials');
-    } else {
-      router.push('/dashboard');
+    setIsLoading(true);
+
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      console.log('Sign in result:', result);
+
+      if (result?.error) {
+        setError('Invalid credentials');
+        setIsLoading(false);
+        return;
+      }
+
+      if (result?.ok) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const response = await fetch('/api/auth/session');
+        const session = await response.json();
+        
+        if (session?.user) {
+          router.push('/dashboard');
+          router.refresh();
+        } else {
+          setError('Session not established');
+        }
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An error occurred during login');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -77,6 +111,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -88,11 +123,16 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
 
-            <Button type="submit" className="w-full h-12 text-base bg-[#5000f7] hover:bg-[#4000d7]">
-              Sign in
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base bg-[#5000f7] hover:bg-[#4000d7]"
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
