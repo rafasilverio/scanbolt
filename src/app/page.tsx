@@ -170,7 +170,7 @@ export default function Home() {
                     <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <p className="text-lg mb-4">"{testimonial.quote}"</p>
+                <p className="text-lg mb-4">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div>
                   <p className="font-semibold">{testimonial.author}</p>
                   <p className="text-sm text-white/60">{testimonial.role}, {testimonial.company}</p>
