@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import OpenAI from 'openai';
 import { Highlight, AIChange } from '@/types/contract';
 
-export const maxDuration = 60; // Set max duration to 300 seconds (5 minutes)
+export const maxDuration = 60; // Set max duration to Vercel default
 export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({
