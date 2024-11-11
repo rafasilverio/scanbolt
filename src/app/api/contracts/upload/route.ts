@@ -201,6 +201,10 @@ export async function POST(req: NextRequest) {
       });
     });
 
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
