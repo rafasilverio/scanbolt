@@ -63,7 +63,7 @@ function recalculateIndices(
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
-) {
+): Promise<Response> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -71,14 +71,14 @@ export async function POST(
     }
 
     // Add timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise<Response>((_, reject) => {
       setTimeout(() => {
         reject(new Error('Request timeout'));
-      }, 250000); // 250 seconds timeout
+      }, 250000);
     });
 
     // Wrap processing in a promise
-    const processingPromise = async () => {
+    const processingPromise = async (): Promise<Response> => {
       // Get existing contract with current highlights and changes
       const existingContract = await prisma.contract.findUnique({
         where: { id: params.id }
@@ -217,8 +217,7 @@ Contract to improve: ${intermediateContent}`
     };
 
     // Race between timeout and processing
-    const result = await Promise.race([processingPromise(), timeoutPromise]);
-    return result;
+    return await Promise.race([processingPromise(), timeoutPromise]);
 
   } catch (error) {
     console.error('Error in revision generation:', error);
