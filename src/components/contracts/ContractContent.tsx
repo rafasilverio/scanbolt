@@ -17,6 +17,10 @@ export function ContractContent({
   selectedChange, 
   onChangeSelect 
 }: ContractContentProps) {
+  if (!contract) {
+    return <div>Loading...</div>;
+  }
+
   const renderHighlightedContent = () => {
     const content = contract.content;
     const highlights = [...contract.highlights].sort((a, b) => a.startIndex - b.startIndex);

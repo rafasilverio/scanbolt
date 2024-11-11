@@ -69,32 +69,34 @@ export function UploadZone() {
       
       const formData = new FormData();
       formData.append('file', file);
-
-      const response = await fetch('/api/contracts/upload', {
+      
+      const uploadResponse = await fetch('/api/contracts/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 
-      setProgress(90);
+      setProgress(50);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed: ${errorText}`);
+      const data = await uploadResponse.json();
+
+      if (!uploadResponse.ok) {
+        throw new Error(data.error || 'Upload failed');
       }
 
-      const data = await response.json();
       setProgress(100);
 
       if (data.success && data.contract) {
         toast.success('Contract uploaded successfully!');
         router.push(`/contracts/${data.contract.id}`);
       } else {
-        throw new Error('Invalid response from server');
+        throw new Error(data.error || 'Invalid response from server');
       }
     } catch (error) {
       console.error('Upload error:', error);
-      setError(error instanceof Error ? error.message : 'Upload failed');
-      toast.error(error instanceof Error ? error.message : 'Upload failed');
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
       setProgress(0);

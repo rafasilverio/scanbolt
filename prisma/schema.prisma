@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,32 +8,34 @@ datasource db {
 }
 
 model User {
-  id                String     @id @db.Uuid @default(uuid())
-  email             String     @unique
-  name              String?
-  password          String?
-  role              Role       @default(FREE)
-  contracts_remaining Int      @default(3)
-  provider          String     @default("credentials")
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
-  contracts         Contract[]
+  id                  String     @id @default(uuid()) @db.Uuid
+  email               String     @unique
+  name                String?
+  contracts_remaining Int        @default(3)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  password            String?
+  provider            String     @default("credentials")
+  role                Role       @default(FREE)
+  contracts           Contract[]
 
   @@map("users")
 }
 
 model Contract {
-  id        String   @id @db.Uuid @default(uuid())
-  title     String
-  fileUrl   String
-  fileName  String
-  status    String
-  fileType  String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id])
+  id         String   @id @default(uuid()) @db.Uuid
+  title      String
+  content    String
+  status     String
+  fileUrl    String
+  fileName   String
+  fileType   String
+  userId     String   @db.Uuid
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  highlights String  @default("[]")
+  changes    String  @default("[]")
+  user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
@@ -50,6 +46,13 @@ enum Role {
 }
 
 enum Status {
+  draft
+  under_review
+  approved
+  rejected
+}
+
+enum contract_status {
   draft
   under_review
   approved

@@ -2,25 +2,34 @@
 
 import { useRouter } from 'next/navigation';
 import { useContractStore } from '@/lib/store/contract-store';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import ContractRevision from '@/components/contracts/ContractRevision';
 
 export default function ContractRevisionPage() {
   const router = useRouter();
   const { contract, setContract, generateRevision } = useContractStore();
+  const hasGeneratedRef = useRef(false);
 
   useEffect(() => {
     const fetchAndGenerateRevision = async () => {
       try {
-        await generateRevision();
+        if (!hasGeneratedRef.current) {
+          await generateRevision();
+          hasGeneratedRef.current = true;
+        }
       } catch (error) {
         console.error('Error generating revision:', error);
       }
     };
 
-    if (contract) {
+    if (contract && !hasGeneratedRef.current) {
       fetchAndGenerateRevision();
     }
+
+    // Cleanup function
+    return () => {
+      hasGeneratedRef.current = false;
+    };
   }, [contract, generateRevision]);
 
   if (!contract) {

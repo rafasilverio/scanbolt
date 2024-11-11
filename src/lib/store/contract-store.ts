@@ -1,28 +1,40 @@
 import { create } from 'zustand';
-import { exampleContract, Contract } from '@/types/contract';
+import { v4 as uuidv4 } from 'uuid';
+import { Contract, AIChange, Highlight } from '@/types/contract';
 
 interface ContractStore {
-  contract: Contract;
-  hasGeneratedRevision: boolean;
+  contract: Contract | null;
+  isGenerating: boolean;
   setContract: (contract: Contract) => void;
-  setHasGeneratedRevision: (value: boolean) => void;
   generateRevision: () => Promise<void>;
 }
 
-export const useContractStore = create<ContractStore>((set) => ({
-  contract: exampleContract,
-  hasGeneratedRevision: false,
-  setContract: (contract) => set({ contract }),
-  setHasGeneratedRevision: (value) => set({ hasGeneratedRevision: value }),
+export const useContractStore = create<ContractStore>((set, get) => ({
+  contract: null,
+  isGenerating: false,
+
+  setContract: (contract: Contract) => {
+    // Ensure all highlights and changes have valid IDs
+    const processedContract = {
+      ...contract,
+      highlights: (contract.highlights || []).map(h => ({
+        ...h,
+        id: h.id || uuidv4()
+      })),
+      changes: (contract.changes || []).map(c => ({
+        ...c,
+        id: c.id || uuidv4()
+      }))
+    };
+    set({ contract: processedContract });
+  },
+
   generateRevision: async () => {
+    set({ isGenerating: true });
     try {
       // Implement your revision generation logic here
-      // Example:
-      // const response = await api.generateRevision(useContractStore.getState().contract.id);
-      // set({ contract: response.data });
-      set({ hasGeneratedRevision: true });
-    } catch (error) {
-      console.error('Error generating revision:', error);
+    } finally {
+      set({ isGenerating: false });
     }
-  },
+  }
 }));

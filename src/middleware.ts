@@ -11,7 +11,6 @@ export default withAuth(
       if (token) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
-      console.log('Middleware - Request path insidei f:', req.nextUrl.pathname);
       return NextResponse.next();
     }
 
@@ -22,23 +21,25 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
+        
         // Allow auth pages without token
         if (path.startsWith('/auth/')) {
           return true;
         }
-        // Require token for other protected routes
+
+        // Require token for protected routes
         return !!token;
       },
     },
   }
 );
 
+// Update the matcher to exclude API routes
 export const config = {
   matcher: [
     '/auth/:path*',
     '/dashboard/:path*',
     '/contracts/:path*',
-    '/api/protected/:path*',
-    '/api/:path*',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

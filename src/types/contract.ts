@@ -26,6 +26,8 @@ export interface Contract {
   id: string;
   title: string;
   content: string;
+  fileUrl: string;  // Add this
+  fileType: string; // Add this
   highlights: Highlight[];
   changes: AIChange[];
   createdAt: string;
@@ -37,6 +39,8 @@ export interface Contract {
 export const exampleContract: Contract = {
   id: "1",
   title: "Software Development Agreement",
+  fileUrl: "äaa",
+  fileType: "äaaaaa",
   content: `SOFTWARE DEVELOPMENT AGREEMENT
 
 This Software Development Agreement (the "Agreement") is made and entered into on [DATE] by and between:

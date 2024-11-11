@@ -42,8 +42,8 @@ module.exports = {
           foreground: "#fefefe",
         },
         muted: {
-          DEFAULT: "#f3f4f6",    // Light gray
-          foreground: "#6b7280",
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
           DEFAULT: "#240063",    // Using brand darker
@@ -56,6 +56,18 @@ module.exports = {
         card: {
           DEFAULT: "#fefefe",
           foreground: "#240063",
+        },
+        warning: {
+          DEFAULT: "hsl(38, 92%, 50%)", // Orange
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(142, 76%, 36%)", // Green
+          foreground: "hsl(var(--success-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(0, 84%, 60%)", // Red
+          foreground: "hsl(var(--destructive-foreground))",
         },
       },
       borderRadius: {

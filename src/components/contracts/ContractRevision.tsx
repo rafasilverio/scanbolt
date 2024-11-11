@@ -5,36 +5,127 @@ import { Contract } from '@/types/contract';
 import { Highlight } from "@/types/contract";
 import { DocumentWrapper } from "../ui/document-wrapper";
 import { DocumentToolbar } from "./DocumentToolbar";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
 import { ArrowLeft, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface ContractRevisionProps {
   contract: Contract;
 }
 
-export function ContractRevision({ contract }: ContractRevisionProps) {
+export function ContractRevision({ contract: initialContract }: ContractRevisionProps) {
   const [zoom, setZoom] = useState(100);
   const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // Use the contract directly without loading state
+  const [contract, setContract] = useState(initialContract);
+
+  // Use the highlights array directly
+  const highlights = contract.highlights || [];
+  
   const stats = {
-    critical: contract.highlights.filter(h => h.type === 'critical').length,
-    warning: contract.highlights.filter(h => h.type === 'warning').length,
-    improvement: contract.highlights.filter(h => h.type === 'improvement').length,
+    critical: highlights.filter(h => h.type === 'critical').length,
+    warning: highlights.filter(h => h.type === 'warning').length,
+    improvement: highlights.filter(h => h.type === 'improvement').length,
   };
+
+  // Single fetch with cleanup
+  useEffect(() => {
+    let isMounted = true;
+    let pollInterval: NodeJS.Timeout;
+
+    const fetchContract = async () => {
+      try {
+        const response = await fetch(`/api/contracts/${initialContract.id}`);
+        const data = await response.json();
+        if (data.contract && isMounted) {
+          setContract(data.contract);
+          
+          // Stop polling when contract is approved
+          if (data.contract.status === 'approved') {
+            clearInterval(pollInterval);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching contract:', error);
+      }
+    };
+
+    // Start polling immediately
+    pollInterval = setInterval(fetchContract, 1000); // Poll every second
+    fetchContract(); // Initial fetch
+
+    return () => {
+      isMounted = false;
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [initialContract.id]); // Remove contract.status dependency
+
+  useEffect(() => {
+    let isMounted = true;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    const verifyAndUpdateStatus = async () => {
+      if (!isMounted || attempts >= maxAttempts) return;
+
+      try {
+        const response = await fetch(`/api/contracts/${initialContract.id}`);
+        const data = await response.json();
+        
+        if (data.contract) {
+          const parsedHighlights = typeof data.contract.highlights === 'string' 
+            ? JSON.parse(data.contract.highlights) 
+            : data.contract.highlights;
+          
+          const parsedChanges = typeof data.contract.changes === 'string'
+            ? JSON.parse(data.contract.changes)
+            : data.contract.changes;
+
+          // If we have the new content and arrays, update status to approved
+          if (data.contract.content && parsedHighlights.length > 0) {
+            await fetch(`/api/contracts/${initialContract.id}/status`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'approved' })
+            });
+          } else {
+            attempts++;
+            setTimeout(verifyAndUpdateStatus, 1000);
+          }
+        }
+      } catch (error) {
+        console.error('Error verifying contract:', error);
+        attempts++;
+        setTimeout(verifyAndUpdateStatus, 1000);
+      }
+    };
+
+    if (contract.status === 'under_review') {
+      verifyAndUpdateStatus();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialContract.id, contract.status]);
 
   const renderHighlightedContent = () => {
     const content = contract.content;
-    const highlights = [...contract.highlights].sort((a, b) => a.startIndex - b.startIndex);
+    // Use the already parsed highlights array
+    const sortedHighlights = [...highlights].sort((a, b) => a.startIndex - b.startIndex);
     const segments: { text: string; highlight?: Highlight }[] = [];
     
     let lastIndex = 0;
     
-    highlights.forEach(highlight => {
+    sortedHighlights.forEach(highlight => {
       if (lastIndex < highlight.startIndex) {
         segments.push({ text: content.slice(lastIndex, highlight.startIndex) });
       }
@@ -57,9 +148,9 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
       }
 
       const highlightColors = {
-        critical: 'bg-red-100 hover:bg-red-200',
-        warning: 'bg-yellow-100 hover:bg-yellow-200',
-        improvement: 'bg-green-100 hover:bg-green-200'
+        critical: 'bg-red-50 text-red-800 hover:bg-red-100',
+        warning: 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100',
+        improvement: 'bg-green-50 text-green-800 hover:bg-green-100'
       };
 
       return (
@@ -71,15 +162,9 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
             highlightColors[segment.highlight.type],
             selectedHighlight?.id === segment.highlight.id && "ring-2 ring-primary"
           )}
-          title={segment.highlight.suggestion || segment.highlight.message}
+          title={segment.highlight.message}
         >
           {segment.text}
-          <span className="absolute hidden group-hover:block bottom-full left-0 w-64 p-2 bg-white border rounded-md shadow-lg text-xs z-10">
-            <strong>{segment.highlight.message}</strong>
-            {segment.highlight.suggestion && (
-              <p className="text-gray-600 mt-1">{segment.highlight.suggestion}</p>
-            )}
-          </span>
         </span>
       );
     });
@@ -145,26 +230,35 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
           <div className="mt-6">
             <h3 className="text-sm font-medium mb-2">Applied Changes</h3>
             <div className="space-y-2">
-              {contract.highlights.map(highlight => (
-                <button
+              {highlights.map(highlight => (
+                <motion.button
                   key={highlight.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
                   onClick={() => handleHighlightClick(highlight)}
                   className={cn(
-                    "text-sm p-2 border rounded-md w-full text-left transition-colors",
-                    "hover:bg-gray-50",
-                    selectedHighlight?.id === highlight.id && "ring-2 ring-primary",
-                    {
-                      'border-red-200': highlight.type === 'critical',
-                      'border-yellow-200': highlight.type === 'warning',
-                      'border-green-200': highlight.type === 'improvement',
-                    }
+                    "w-full text-left bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-all",
+                    selectedHighlight?.id === highlight.id && "ring-2 ring-primary"
                   )}
                 >
-                  <p className="font-medium">{highlight.message}</p>
-                  {highlight.suggestion && (
-                    <p className="text-gray-600 text-xs mt-1">{highlight.suggestion}</p>
-                  )}
-                </button>
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full mt-2",
+                      highlight.type === 'critical' && "bg-red-500",
+                      highlight.type === 'warning' && "bg-yellow-500",
+                      highlight.type === 'improvement' && "bg-green-500"
+                    )} />
+                    <div>
+                      <p className="text-sm font-medium">{highlight.message}</p>
+                      {highlight.suggestion && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {highlight.suggestion}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </motion.button>
               ))}
             </div>
           </div>

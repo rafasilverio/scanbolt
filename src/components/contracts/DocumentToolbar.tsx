@@ -6,34 +6,48 @@ import {
   Printer, 
   Share2, 
   ZoomIn, 
-  ZoomOut 
+  ZoomOut, 
+  Minus, 
+  Plus 
 } from "lucide-react";
 
 interface DocumentToolbarProps {
   zoom: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onZoomReset: () => void;
 }
 
-export function DocumentToolbar({ zoom, onZoomIn, onZoomOut }: DocumentToolbarProps) {
+export function DocumentToolbar({ zoom, onZoomIn, onZoomOut, onZoomReset }: DocumentToolbarProps) {
   return (
-    <div className="flex items-center gap-2 p-2 border-b">
-      <div className="flex items-center gap-1">
-        <button
+    <div className="border-t p-2 bg-white flex items-center justify-end space-x-2">
+      <div className="flex items-center space-x-1">
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onZoomOut}
-          className="p-2 hover:bg-gray-100 rounded"
-          aria-label="Zoom out"
+          disabled={zoom <= 50}
         >
-          -
-        </button>
-        <span className="min-w-[3rem] text-center">{zoom}%</span>
-        <button
+          <Minus className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onZoomReset}
+          className="min-w-[4rem]"
+        >
+          {zoom}%
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onZoomIn}
-          className="p-2 hover:bg-gray-100 rounded"
-          aria-label="Zoom in"
+          disabled={zoom >= 200}
         >
-          +
-        </button>
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

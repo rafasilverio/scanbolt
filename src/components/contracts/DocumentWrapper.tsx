@@ -3,13 +3,26 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { FileText } from "lucide-react";
+import { Contract } from "@/types/contract";
+import { formatDistanceToNow } from "date-fns";
 
 interface DocumentWrapperProps {
   children: React.ReactNode;
   className?: string;
+  contract?: Contract;
 }
 
-export function DocumentWrapper({ children, className }: DocumentWrapperProps) {
+export function DocumentWrapper({ children, className, contract }: DocumentWrapperProps) {
+  // Calculate number of pages based on content length (rough estimate)
+  const estimatedPages = contract?.content 
+    ? Math.ceil(contract.content.length / 3000) // Adjust this number based on your needs
+    : 1;
+
+  // Format the date
+  const timeAgo = contract?.createdAt 
+    ? formatDistanceToNow(new Date(contract.createdAt), { addSuffix: true })
+    : '';
+
   return (
     <div className="relative w-full max-w-4xl mx-auto">
       {/* Paper shadow effect */}
@@ -26,8 +39,12 @@ export function DocumentWrapper({ children, className }: DocumentWrapperProps) {
       >
         <FileText className="h-5 w-5 text-muted-foreground" />
         <div className="flex-1">
-          <p className="text-sm font-medium">Contract Document</p>
-          <p className="text-xs text-muted-foreground">PDF • 8 pages</p>
+          <p className="text-sm font-medium">
+            {contract?.title || 'Contract Document'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {`${estimatedPages} ${estimatedPages === 1 ? 'page' : 'pages'} • Created ${timeAgo}`}
+          </p>
         </div>
       </motion.div>
 

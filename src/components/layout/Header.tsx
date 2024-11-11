@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -26,31 +26,52 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const navigationItems = [
-  {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    href: "/dashboard",
-    color: "text-emerald-500",
-  },
-  {
-    title: "Contracts",
-    icon: FileText,
-    href: "/contracts",
-    badge: "12",
-    color: "text-blue-500",
-  },
-  {
-    title: "Upload",
-    icon: Upload,
-    href: "/contracts/upload",
-    color: "text-purple-500",
-  },
-];
-
 export function Header() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const [contractCount, setContractCount] = useState<number | null>(null);
+
+  // Fetch contract count
+  useEffect(() => {
+    const fetchContractCount = async () => {
+      try {
+        const response = await fetch('/api/contracts/count');
+        const data = await response.json();
+        setContractCount(data.count);
+      } catch (error) {
+        console.error('Error fetching contract count:', error);
+        setContractCount(0);
+      }
+    };
+
+    if (session?.user) {
+      fetchContractCount();
+    }
+  }, [session]);
+
+  const navigationItems = [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      href: "/dashboard",
+      color: "text-emerald-500",
+    },
+    {
+      title: "Contracts",
+      icon: FileText,
+      href: "/contracts",
+      badge: contractCount !== null ? (
+        contractCount > 0 ? contractCount.toString() : "Add Contract"
+      ) : null,
+      color: "text-blue-500",
+    },
+    {
+      title: "Upload",
+      icon: Upload,
+      href: "/contracts/upload",
+      color: "text-purple-500",
+    },
+  ];
 
   const userInitials = session?.user?.name
     ? session.user.name.split(' ').map(n => n[0]).join('')
@@ -92,7 +113,7 @@ export function Header() {
                     <span
                       className={cn(
                         "px-2 py-0.5 text-xs rounded-full",
-                        typeof item.badge === "string" && item.badge.toLowerCase() === "new"
+                        item.badge === "Add"
                           ? "bg-emerald-500 text-white"
                           : "bg-white text-[#5000f7]"
                       )}

@@ -28,11 +28,11 @@ model Contract {
   id        String   @id @default(cuid())
   title     String
   content   String   @db.Text
+  status    ContractStatus @default(draft)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   highlights Json[]  // Stores Highlight[]
   changes   Json[]   // Stores AIChange[]
-  status    ContractStatus @default(draft)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
