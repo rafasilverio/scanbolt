@@ -90,3 +90,9 @@ The color palette is:
 - Accessible (meets WCAG guidelines)
 - Flexible for various UI elements
 - Consistent with modern SaaS applications
+
+
+
+
+Instant AI Powered Contract Review
+better and cheaper than lawyers
