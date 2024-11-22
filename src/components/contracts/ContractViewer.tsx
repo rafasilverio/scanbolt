@@ -18,6 +18,8 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  X,
+  ArrowRight,
 } from 'lucide-react';
 import { Diff } from '@/components/contracts/Diff';
 import { AIChangeBadge } from '@/components/contracts/AIChangeBadge';
@@ -108,6 +110,14 @@ export default function ContractViewer({
   const handleHighlightClick = (highlight: Highlight) => {
     setSelectedHighlight(highlight);
     
+    const relatedChange = storeContract?.changes?.find(
+      change => change.startIndex === highlight.startIndex && 
+                change.endIndex === highlight.endIndex
+    );
+    if (relatedChange) {
+      setSelectedChange(relatedChange);
+    }
+    
     const element = document.getElementById(`highlight-${highlight.id}`);
     if (element && contentRef.current) {
       const container = contentRef.current;
@@ -123,6 +133,30 @@ export default function ContractViewer({
       element.classList.add('flash-highlight');
       setTimeout(() => element.classList.remove('flash-highlight'), 1000);
     }
+  };
+
+  const handleNext = () => {
+    if (!storeContract?.changes || !selectedChange) return;
+    
+    // Find current index
+    const currentIndex = storeContract.changes.findIndex(
+      change => change.id === selectedChange.id
+    );
+    
+    // Get next change (or wrap around to first)
+    const nextIndex = (currentIndex + 1) % storeContract.changes.length;
+    const nextChange = storeContract.changes[nextIndex];
+    
+    // Find corresponding highlight
+    const nextHighlight = storeContract.highlights.find(
+      h => h.startIndex === nextChange.startIndex && h.endIndex === nextChange.endIndex
+    );
+    
+    if (nextHighlight) {
+      handleHighlightClick(nextHighlight);
+    }
+    
+    setSelectedChange(nextChange);
   };
 
   // Check if there are any changes at all
@@ -263,72 +297,8 @@ export default function ContractViewer({
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 h-[calc(100vh-16rem)] overflow-hidden">
-        {/* Left Analysis Panel */}
-        <div className="w-80 border-r bg-muted/30 overflow-y-auto">
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">
-                {selectedIssueType 
-                  ? `${selectedIssueType.charAt(0).toUpperCase() + selectedIssueType.slice(1)} Issues`
-                  : "Document Analysis"
-                }
-              </h3>
-              <span className="text-xs text-muted-foreground">
-                {filteredHighlights.length} issues found
-              </span>
-            </div>
-
-            {/* Filter Reset */}
-            {selectedIssueType && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-muted-foreground hover:text-white"
-                onClick={() => setSelectedIssueType(null)}
-              >
-                Clear Filter
-              </Button>
-            )}
-
-            {/* Highlights List - Update to use filteredHighlights */}
-            <AnimatePresence mode="wait">
-              {filteredHighlights.map((highlight) => (
-                <motion.button
-                  key={highlight.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  onClick={() => handleHighlightClick(highlight)}
-                  className={cn(
-                    "w-full text-left bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-all",
-                    selectedHighlight?.id === highlight.id && "ring-2 ring-primary"
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full mt-2",
-                      highlight.type === 'critical' && "bg-red-500",
-                      highlight.type === 'warning' && "bg-yellow-500",
-                      highlight.type === 'improvement' && "bg-green-500"
-                    )} />
-                    <div>
-                      <p className="text-sm font-medium">{highlight.message}</p>
-                      {highlight.suggestion && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {highlight.suggestion}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </motion.button>
-              ))}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Main Document Area */}
+      {/* Main Content Area - Removed left panel */}
+      <div className="flex-1 h-[calc(100vh-16rem)] overflow-hidden">
         <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
           <div 
             className="container max-w-4xl mx-auto py-8"
@@ -339,34 +309,37 @@ export default function ContractViewer({
             }}
           >
             <DocumentWrapper contract={storeContract || undefined}>
-              <ContractContent
-                contract={storeContract || undefined}
-                selectedHighlight={selectedHighlight}
-                selectedChange={selectedChange}
-                onChangeSelect={setSelectedChange}
-              />
+              <div className="relative">
+                <ContractContent
+                  contract={storeContract || undefined}
+                  selectedHighlight={selectedHighlight}
+                  selectedChange={selectedChange}
+                  onChangeSelect={setSelectedChange}
+                  highlights={filteredHighlights}
+                  onHighlightClick={handleHighlightClick}
+                />
+                <AnimatePresence>
+                  {selectedChange && (
+                    <InlineComment
+                      change={selectedChange}
+                      onClose={() => setSelectedChange(null)}
+                      onNext={handleNext}
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
             </DocumentWrapper>
           </div>
         </div>
       </div>
 
-      {/* Fixed Bottom Toolbar */}
+      {/* Keep existing toolbar and floating comments */}
       <DocumentToolbar
         zoom={zoom}
         onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
         onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
         onZoomReset={() => setZoom(100)}
       />
-
-      {/* Floating Comments */}
-      <AnimatePresence>
-        {selectedChange && (
-          <InlineComment
-            change={selectedChange}
-            onClose={() => setSelectedChange(null)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -192,8 +192,46 @@ export function ContractRevision({ contract: initialContract }: ContractRevision
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
-      {/* Summary Sidebar */}
-      <div className="w-80 border-r bg-white h-full flex flex-col overflow-y-auto">
+      {/* Main Content - Now First */}
+      <div className="flex-1 flex flex-col">
+        <div className="bg-white border-b px-4 py-2 flex items-center justify-between sticky top-0 z-50">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-lg font-semibold">
+              {contract.title} - Revised Version
+            </h1>
+          </div>
+        </div>
+
+        <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="container max-w-4xl mx-auto py-8">
+            <DocumentWrapper style={{ zoom: `${zoom}%` }}>
+              <div className="prose max-w-none">
+                <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed">
+                  {renderHighlightedContent()}
+                </pre>
+              </div>
+            </DocumentWrapper>
+          </div>
+        </div>
+
+        <DocumentToolbar
+          zoom={zoom}
+          onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
+          onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
+          onZoomReset={() => setZoom(100)}
+        />
+      </div>
+
+      {/* Summary Sidebar - Now Last */}
+      <div className="w-80 border-l bg-white h-full flex flex-col overflow-y-auto">
         <div className="p-4 border-b">
           <h2 className="font-semibold">Changes Summary</h2>
         </div>
@@ -233,7 +271,7 @@ export function ContractRevision({ contract: initialContract }: ContractRevision
               {highlights.map(highlight => (
                 <motion.button
                   key={highlight.id}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   onClick={() => handleHighlightClick(highlight)}
@@ -263,44 +301,6 @@ export function ContractRevision({ contract: initialContract }: ContractRevision
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <div className="bg-white border-b px-4 py-2 flex items-center justify-between sticky top-0 z-50">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.back()}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-lg font-semibold">
-              {contract.title} - Revised Version
-            </h1>
-          </div>
-        </div>
-
-        <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
-          <div className="container max-w-4xl mx-auto py-8">
-            <DocumentWrapper style={{ zoom: `${zoom}%` }}>
-              <div className="prose max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed">
-                  {renderHighlightedContent()}
-                </pre>
-              </div>
-            </DocumentWrapper>
-          </div>
-        </div>
-
-        <DocumentToolbar
-          zoom={zoom}
-          onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
-          onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
-          onZoomReset={() => setZoom(100)}
-        />
       </div>
     </div>
   );
