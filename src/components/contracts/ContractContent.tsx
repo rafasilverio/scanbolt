@@ -114,29 +114,34 @@ export function InlineComment({ change, onClose, onNext, hasNext }: InlineCommen
         <div className="space-y-2">
           <div className="bg-gray-50 p-2 rounded">
             <div className="text-xs text-gray-500">Current Text:</div>
-            <div className="text-sm">{change.originalText}</div>
+            <div className="text-sm">{change.originalContent}</div>
           </div>
           
           <div className="bg-blue-50 p-2 rounded">
             <div className="text-xs text-blue-500">Suggested Change:</div>
-            <div className="text-sm">{change.suggestedText}</div>
+            <div className="text-sm">{change.content}</div>
           </div>
+
+          {change.explanation && (
+            <div className="bg-gray-50 p-2 rounded">
+              <div className="text-xs text-gray-500">Explanation:</div>
+              <div className="text-sm">{change.explanation}</div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-500">
             {change.reason}
           </div>
-          {hasNext && (
-            <Button
-              size="sm"
-              onClick={onNext}
-              className="flex items-center gap-2"
-            >
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            size="sm"
+            onClick={onNext}
+            className="flex items-center gap-2"
+          >
+            Next
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </motion.div>

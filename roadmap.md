@@ -93,6 +93,38 @@ The color palette is:
 
 
 
+Home
+FREE Contract Review powered by AI
+better than lawyers - free forever
 
-Instant AI Powered Contract Review
-better and cheaper than lawyers
+Analyzed your contract in seconds - free forever
+
+Serviços:
+- Analise/Revisão de contratos - grátis pra sempre/no limit
+- Reescrever contratos
+- Apoio na negociação
+
+
+## 01 - Cadastro - Fluxo inicial
+Home
+ - CTA: Revisar meu contrato Agora
+
+Pagina do contrato
+- Barra na direita com as issues
+- Label under_review
+- Remover tabs da página
+
+Teste:
+- Ocultar barra lateral e deixar só o contrato
+- Popup das issues com as opções - Gerar contrato revisado / Revisar próximo
+- Barra lateral só no final da revisão
+
+- Popup de next é a chave 
+
+Contrato:
+- IA Gerar o tipo de contrato
+
+
+## 02 - 
+
+## 03 - AI 
