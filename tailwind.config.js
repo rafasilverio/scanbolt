@@ -69,6 +69,7 @@ module.exports = {
           DEFAULT: "hsl(0, 84%, 60%)", // Red
           foreground: "hsl(var(--destructive-foreground))",
         },
+        primary: '#1E1B3C',
       },
       borderRadius: {
         lg: "var(--radius)",

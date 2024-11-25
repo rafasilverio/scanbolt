@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { useSession } from 'next-auth/react';
 import { ContractFileSchema } from '@/lib/validators/contract';
 import { toast } from 'sonner';
+import { ProcessingModal } from "./ProcessingModal";
 
 export function UploadZone() {
   const { data: session } = useSession();
@@ -16,6 +17,7 @@ export function UploadZone() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
   const router = useRouter();
 
   const handleFile = useCallback((selectedFile: File) => {
@@ -84,120 +86,156 @@ export function UploadZone() {
   };
 
   const handleUpload = async (file: File) => {
+    if (!session) {
+      localStorage.setItem('pendingUpload', file.name);
+      router.push('/auth/register');
+      return;
+    }
+
     try {
       setLoading(true);
-      setProgress(10);
+      setProgress(0);
+      setShowProcessing(true);
       
+      // Simulate upload progress
+      const uploadTimer = setInterval(() => {
+        setProgress(prev => Math.min(prev + 5, 90)); // Go up to 90%
+      }, 200);
+
       const formData = new FormData();
       formData.append('file', file);
       
       const data = await uploadContract(formData);
-
-      setProgress(50);
+      clearInterval(uploadTimer);
 
       if (!data.success) {
         throw new Error(data.error || 'Invalid response from server');
       }
 
-      setProgress(100);
+      setProgress(100); // Complete the progress
 
-      if (data.success && data.contract) {
-        toast.success('Contract uploaded successfully!');
-        router.push(`/contracts/${data.contract.id}`);
-      } else {
-        throw new Error(data.error || 'Invalid response from server');
-      }
+      // Wait for processing animation to complete (about 30 seconds total)
+      setTimeout(() => {
+        if (data.success && data.contract) {
+          toast.success('Contract uploaded successfully!');
+          router.push(`/contracts/${data.contract.id}`);
+        }
+      }, 30000);
+
     } catch (error) {
       console.error('Upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       setError(errorMessage);
       toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-      setProgress(0);
+      setShowProcessing(false);
     }
   };
 
+  // Update the UI based on session state
+  const getUploadText = () => {
+    if (!session) {
+      return {
+        main: "Start Your Contract Analysis",
+        sub: "Sign up or login to analyze your contract"
+      };
+    }
+    return {
+      main: "Drag and drop your contract here",
+      sub: "or browse files"
+    };
+  };
+
+  const uploadText = getUploadText();
+
   return (
-    <div className="w-full">
-      <div 
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg p-12 text-center ${
-          isDragging ? 'border-[#2563EB] bg-blue-50' :
-          error ? 'border-red-500 bg-red-50' : 
-          file ? 'border-green-500 bg-green-50' : 
-          'border-gray-300 hover:border-[#2563EB] hover:bg-blue-50'
-        } transition-colors`}
-      >
-        {!file ? (
+    <>
+      <div className="w-full">
+        <div 
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`border-2 border-dashed rounded-lg p-12 text-center ${
+            isDragging ? 'border-[#2563EB] bg-blue-50/10' :
+            error ? 'border-red-500 bg-red-50/10' : 
+            file ? 'border-green-500 bg-green-50/10' : 
+            'border-[#BFDBFE]/30 hover:border-[#2563EB] hover:bg-[#2563EB]/20'
+          } transition-colors`}
+        >
+          {!file ? (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <Upload className="h-12 w-12 text-[#BFDBFE]" />
+              </div>
+              <div>
+                <p className="text-lg font-medium text-white">{uploadText.main}</p>
+                <p className="text-sm text-[#BFDBFE]">{uploadText.sub}</p>
+                <Button
+                  variant="ghost"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  className="text-[#BFDBFE] hover:text-white hover:bg-[#2563EB]/20"
+                >
+                  Browse files
+                </Button>
+                <input
+                  id="file-upload"
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleFileInput}
+                />
+              </div>
+              <p className="text-sm text-[#BFDBFE]">
+                Supported formats: PDF, DOC, DOCX, TXT (max 10MB)
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center space-x-4">
+                <FileIcon className="h-8 w-8 text-green-500" />
+                <span className="font-medium text-white">{file.name}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFile(null)}
+                  className="text-[#BFDBFE] hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+        {error && (
+          <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {error}
+          </p>
+        )}
+        {file && !error && (
           <div className="space-y-4">
-            <div className="flex justify-center">
-              <Upload className="h-12 w-12 text-gray-400" />
-            </div>
-            <div>
-              <p className="text-lg font-medium">Drag and drop your contract here</p>
-              <p className="text-sm text-gray-500">or</p>
-              <Button
-                variant="ghost"
-                onClick={() => document.getElementById('file-upload')?.click()}
-              >
-                Browse files
-              </Button>
-              <input
-                id="file-upload"
-                type="file"
-                className="hidden"
-                accept=".pdf,.doc,.docx,.txt"
-                onChange={handleFileInput}
-              />
-            </div>
-            <p className="text-sm text-gray-500">
-              Supported formats: PDF, DOC, DOCX, TXT (max 10MB)
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-center space-x-4">
-              <FileIcon className="h-8 w-8 text-green-500" />
-              <span className="font-medium">{file.name}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setFile(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            {loading && (
+              <div className="space-y-2">
+                <Progress value={progress} className="bg-[#2563EB]/20" />
+                <p className="text-sm text-[#BFDBFE] text-center">
+                  {progress === 100 ? 'Processing contract...' : 'Uploading...'}
+                </p>
+              </div>
+            )}
+            <Button
+              className="w-full bg-[#2563EB] hover:bg-[#1E40AF]"
+              onClick={() => handleUpload(file)}
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : 'Analyze Contract'}
+            </Button>
           </div>
         )}
       </div>
-      {error && (
-        <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-          <AlertCircle className="w-4 h-4" />
-          {error}
-        </p>
-      )}
-      {file && !error && (
-        <div className="space-y-4">
-          {loading && (
-            <div className="space-y-2">
-              <Progress value={progress} />
-              <p className="text-sm text-gray-500 text-center">
-                {progress === 100 ? 'Processing contract...' : 'Uploading...'}
-              </p>
-            </div>
-          )}
-          <Button
-            className="w-full bg-[#2563EB] hover:bg-[#1E40AF]"
-            onClick={() => handleUpload(file)}
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : 'Analyze Contract'}
-          </Button>
-        </div>
-      )}
-    </div>
+      <ProcessingModal 
+        isOpen={showProcessing}
+        onCancel={() => setShowProcessing(false)}
+        progress={progress}
+      />
+    </>
   );
 }
