@@ -14,6 +14,8 @@ import {
   FileText,
   Lightbulb,
   AlertCircle,
+  Calendar,
+  Book,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,12 +25,17 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 interface StatsHeaderProps {
   contract: {
     status?: string;
     highlights?: Highlight[] | string;
     changes?: AIChange[] | string;
+    title?: string;
+    createdAt?: string;
+    fileType?: string;
+    pageCount?: number;
   } | null;
   onIssueClick: (type: HighlightType) => void;
   selectedIssueType: HighlightType | null;
@@ -115,41 +122,66 @@ export default function StatsHeader({ contract, onIssueClick, selectedIssueType 
   };
 
   return (
-    <div className="flex items-center gap-4">
-      <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(contract?.status || 'pending')}`}>
-        {contract?.status === 'under_review' ? 'Under Review' : 
-         contract?.status === 'approved' ? 'Approved' : 'Pending'}
+    <div className="flex flex-col gap-4">
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold truncate">
+          {contract?.title || 'Untitled Contract'}
+        </h2>
+        <div className="text-sm text-gray-500 space-y-1">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            <span className="uppercase">{contract?.fileType || 'DOC'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            <span>
+              {contract?.createdAt 
+                ? new Date(contract.createdAt).toLocaleDateString() 
+                : 'No date'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Book className="w-4 h-4" />
+            <span>
+              {contract?.pageCount || 1} {(contract?.pageCount || 1) === 1 ? 'page' : 'pages'}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onIssueClick('warning')}
-        className={`${getIssueButtonStyle('warning', warningCount)} border transition-colors`}
-      >
-        <AlertTriangle className="w-4 h-4 mr-2" />
-        {warningCount} Warnings
-      </Button>
+      <Separator className="my-2" />
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onIssueClick('critical')}
-        className={`${getIssueButtonStyle('critical', dangerCount)} border transition-colors`}
-      >
-        <AlertCircle className="w-4 h-4 mr-2" />
-        {dangerCount} Critical Issues
-      </Button>
+      <div className="space-y-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onIssueClick('warning')}
+          className={`${getIssueButtonStyle('warning', warningCount)} border transition-colors w-full justify-start`}
+        >
+          <AlertTriangle className="w-4 h-4 mr-2" />
+          {warningCount} Warnings
+        </Button>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onIssueClick('improvement')}
-        className={`${getIssueButtonStyle('improvement', improvementCount)} border transition-colors`}
-      >
-        <Lightbulb className="w-4 h-4 mr-2" />
-        {improvementCount} Improvements
-      </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onIssueClick('critical')}
+          className={`${getIssueButtonStyle('critical', dangerCount)} border transition-colors w-full justify-start`}
+        >
+          <AlertCircle className="w-4 h-4 mr-2" />
+          {dangerCount} Critical Issues
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onIssueClick('improvement')}
+          className={`${getIssueButtonStyle('improvement', improvementCount)} border transition-colors w-full justify-start`}
+        >
+          <Lightbulb className="w-4 h-4 mr-2" />
+          {improvementCount} Improvements
+        </Button>
+      </div>
     </div>
   );
 }

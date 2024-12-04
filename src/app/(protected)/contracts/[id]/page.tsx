@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import * as Tabs from '@radix-ui/react-tabs';
 import ContractViewer from "@/components/contracts/ContractViewer";
 import { useParams, useRouter } from 'next/navigation';
 import { Contract } from '@/types/contract';
@@ -144,53 +143,11 @@ export default function ContractPage() {
 
   return (
     <div className="h-full">
-      <Tabs.Root defaultValue="review" className="h-full">
-        <div className="border-b px-4">
-          <Tabs.List className="flex gap-4">
-            <Tabs.Trigger 
-              value="review"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-primary"
-            >
-              Review
-            </Tabs.Trigger>
-            <Tabs.Trigger 
-              value="document"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-primary"
-            >
-              Original Document
-            </Tabs.Trigger>
-          </Tabs.List>
-        </div>
-        
-        <Tabs.Content value="review" className="h-[calc(100%-48px)]">
-          <ContractViewer 
-            contract={contract} 
-            onGenerateRevision={handleGenerateRevision}
-            isGenerating={isGenerating}
-          />
-        </Tabs.Content>
-
-        <Tabs.Content value="document" className="h-[calc(100%-48px)] p-4">
-          {contract.fileType === 'application/pdf' ? (
-            <iframe
-              src={contract.fileUrl}
-              className="w-full h-full rounded-lg border"
-              title={contract.title}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <a 
-                href={contract.fileUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                Download Original Document
-              </a>
-            </div>
-          )}
-        </Tabs.Content>
-      </Tabs.Root>
+      <ContractViewer 
+        contract={contract} 
+        onGenerateRevision={handleGenerateRevision}
+        isGenerating={isGenerating}
+      />
     </div>
   );
 }

@@ -61,7 +61,6 @@ export default function ContractViewer({
 
   // Use this single source of truth for generating state
   const isGenerating = storeContract?.status === 'generating';
-  const showGenerateButton = storeContract?.status === 'under_review' && !isGenerating;
   const showViewRevisionButton = storeContract?.status === 'approved';
 
   const handleIssueClick = (type: HighlightType) => {
@@ -258,88 +257,94 @@ export default function ContractViewer({
     );
   }, [storeContract?.highlights, selectedIssueType]);
 
+  const getPageCount = (content?: string): number => {
+    if (!content) return 0;
+    return Math.max(1, Math.ceil((content.length) / 3000));
+  };
+
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
-        <StatsHeader 
-          contract={storeContract}
-          onIssueClick={handleIssueClick}
-          selectedIssueType={selectedIssueType}
-        />
-
-        <div className="ml-6 flex-shrink-0">
-          {isGenerating ? (
-            <Button 
-              disabled
-              className="bg-[#BFDBFE] text-[#94A3B8] transition-colors"
-              size="default"
-            >
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating Revision...
-            </Button>
-          ) : showGenerateButton ? (
-            <Button 
-              onClick={handleGenerateRevision}
-              className="bg-[#5000f7] hover:bg-[#2563EB] text-white transition-colors"
-              size="default"
-            >
-              Generate Revised Contract
-            </Button>
-          ) : showViewRevisionButton ? (
-            <Button 
-              onClick={handleViewRevision}
-              className="bg-[#2563EB] hover:bg-[#5000f7] text-white transition-colors"
-              size="default"
-            >
-              View Revised Contract
-            </Button>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Main Content Area - Removed left panel */}
-      <div className="flex-1 h-[calc(100vh-16rem)] overflow-hidden">
-        <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
-          <div 
-            className="container max-w-4xl mx-auto py-8"
-            style={{ 
-              transform: `scale(${zoom / 100})`,
-              transformOrigin: 'top center',
-              transition: 'transform 0.2s ease-in-out'
-            }}
-          >
-            <DocumentWrapper contract={storeContract || undefined}>
-              <div className="relative">
-                <ContractContent
-                  contract={storeContract || undefined}
-                  selectedHighlight={selectedHighlight}
-                  selectedChange={selectedChange}
-                  onChangeSelect={setSelectedChange}
-                  highlights={filteredHighlights}
-                  onHighlightClick={handleHighlightClick}
-                />
-                <AnimatePresence>
-                  {selectedChange && (
-                    <InlineComment
-                      change={selectedChange}
-                      onClose={() => setSelectedChange(null)}
-                      onNext={handleNext}
-                    />
-                  )}
-                </AnimatePresence>
-              </div>
-            </DocumentWrapper>
+    <div className="h-full flex">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-end p-4 border-b">
+          <div className="flex-shrink-0">
+            {isGenerating ? (
+              <Button 
+                disabled
+                className="bg-[#BFDBFE] text-[#94A3B8] transition-colors"
+                size="default"
+              >
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating Revision...
+              </Button>
+            ) : showViewRevisionButton ? (
+              <Button 
+                onClick={handleViewRevision}
+                className="bg-[#2563EB] hover:bg-[#5000f7] text-white transition-colors"
+                size="default"
+              >
+                View Revised Contract
+              </Button>
+            ) : null}
           </div>
         </div>
+
+        <div className="flex-1 h-[calc(100vh-16rem)] overflow-hidden">
+          <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
+            <div 
+              className="container max-w-4xl mx-auto py-8"
+              style={{ 
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.2s ease-in-out'
+              }}
+            >
+              <DocumentWrapper contract={storeContract || undefined}>
+                <div className="relative">
+                  <ContractContent
+                    contract={storeContract || undefined}
+                    selectedHighlight={selectedHighlight}
+                    selectedChange={selectedChange}
+                    onChangeSelect={setSelectedChange}
+                    highlights={filteredHighlights}
+                    onHighlightClick={handleHighlightClick}
+                  />
+                  <AnimatePresence>
+                    {selectedChange && (
+                      <InlineComment
+                        change={selectedChange}
+                        onClose={() => setSelectedChange(null)}
+                        onNext={handleNext}
+                      />
+                    )}
+                  </AnimatePresence>
+                </div>
+              </DocumentWrapper>
+            </div>
+          </div>
+        </div>
+
+        <DocumentToolbar
+          zoom={zoom}
+          onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
+          onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
+          onZoomReset={() => setZoom(100)}
+        />
       </div>
 
-      {/* Keep existing toolbar and floating comments */}
-      <DocumentToolbar
-        zoom={zoom}
-        onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
-        onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
-        onZoomReset={() => setZoom(100)}
-      />
+      {/* Right Sidebar */}
+      <div className="w-80 border-l bg-white overflow-y-auto">
+        <div className="p-4">
+          <StatsHeader 
+            contract={{
+              ...storeContract,
+              pageCount: getPageCount(storeContract?.content)
+            }}
+            onIssueClick={handleIssueClick}
+            selectedIssueType={selectedIssueType}
+          />
+        </div>
+      </div>
     </div>
   );
 }
