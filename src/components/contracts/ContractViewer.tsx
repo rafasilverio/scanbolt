@@ -49,7 +49,7 @@ export default function ContractViewer({
   const [selectedChange, setSelectedChange] = useState<AIChange | null>(null);
   const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
   const [selectedIssueType, setSelectedIssueType] = useState<HighlightType | null>(null);
-  const [zoom, setZoom] = useState(100);
+  const [zoom, setZoom] = useState(110);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const { 
@@ -266,7 +266,7 @@ export default function ContractViewer({
     <div className="h-full flex">
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-end p-4 border-b">
+        {/* <div className="flex items-center justify-end p-4 border-b">
           <div className="flex-shrink-0">
             {isGenerating ? (
               <Button 
@@ -286,13 +286,13 @@ export default function ContractViewer({
                 View Revised Contract
               </Button>
             ) : null}
-          </div>
-        </div>
+          </div> 
+        </div>*/}
 
         <div className="flex-1 h-[calc(100vh-16rem)] overflow-hidden">
           <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
             <div 
-              className="container max-w-4xl mx-auto py-8"
+              className="container max-w-4xl mx-auto py-4"
               style={{ 
                 transform: `scale(${zoom / 100})`,
                 transformOrigin: 'top center',

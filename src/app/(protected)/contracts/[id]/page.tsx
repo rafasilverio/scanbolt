@@ -7,6 +7,7 @@ import { Contract } from '@/types/contract';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
+import { ReviewSummary } from '@/components/contracts/ReviewSummary';
 
 export default function ContractPage() {
   const params = useParams();
@@ -16,6 +17,7 @@ export default function ContractPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showReview, setShowReview] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -117,6 +119,11 @@ export default function ContractPage() {
     }
   };
 
+  const handleStartReview = () => {
+    setShowReview(true);
+    // Aqui você pode adicionar mais lógica posteriormente
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-4">
@@ -143,6 +150,21 @@ export default function ContractPage() {
 
   return (
     <div className="h-full">
+      <div className="w-full bg-gradient-to-b from-[#5000f7] to-[#2563EB] px-6 py-8">
+        <div className="max-w-7xl mx-auto space-y-4">
+          <h1 className="text-white text-2xl font-semibold">
+            AI Contract Analysis Report
+          </h1>
+          <p className="text-blue-100 text-lg">
+            Our AI has analyzed your contract and identified potential risks and opportunities for improvement
+          </p>
+          <ReviewSummary 
+            contract={contract}
+            onStartReview={handleStartReview}
+            showReview={showReview}
+          />
+        </div>
+      </div>
       <ContractViewer 
         contract={contract} 
         onGenerateRevision={handleGenerateRevision}
