@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { X, ArrowRight } from "lucide-react";
+import { X, ArrowRight, AlertTriangle, AlertCircle, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AIChange } from "@/types/contract";
 import { useEffect, useState } from "react";
@@ -25,34 +25,49 @@ export function InlineComment({ change, onClose, onNext }: InlineCommentProps) {
       const highlightRect = highlightElement.getBoundingClientRect();
       const wrapperRect = documentWrapper.getBoundingClientRect();
 
-      // Calculate position relative to the document wrapper
       let top = highlightRect.top - wrapperRect.top;
+      top = top + (highlightRect.height / 2) - 200;
       
-      // Center vertically with the highlight
-      top = top + (highlightRect.height / 2) - 200; // 200 is half the height of the float box
-      
-      // Ensure it stays within the wrapper bounds
       if (top < 0) top = 0;
       if (top > wrapperRect.height - 400) top = wrapperRect.height - 400;
 
       setPosition({
         top,
-        right: -340 // Position it just outside the wrapper on the right
+        right: -340
       });
 
-      // Scroll the highlight into view if needed
       highlightElement.scrollIntoView({
         behavior: 'smooth',
         block: 'center'
       });
     };
 
-    // Calculate position initially and on window resize
     calculatePosition();
     window.addEventListener('resize', calculatePosition);
-    
     return () => window.removeEventListener('resize', calculatePosition);
   }, [change.id]);
+
+  const getIssueIcon = () => {
+    switch (change.type) {
+      case 'critical':
+        return <AlertCircle className="w-4 h-4" />;
+      case 'warning':
+        return <AlertTriangle className="w-4 h-4" />;
+      case 'improvement':
+        return <Lightbulb className="w-4 h-4" />;
+    }
+  };
+
+  const getIssueColor = () => {
+    switch (change.type) {
+      case 'critical':
+        return 'bg-red-50 text-red-600';
+      case 'warning':
+        return 'bg-yellow-50 text-yellow-600';
+      case 'improvement':
+        return 'bg-green-50 text-green-600';
+    }
+  };
 
   return (
     <motion.div
@@ -70,7 +85,10 @@ export function InlineComment({ change, onClose, onNext }: InlineCommentProps) {
       }}
     >
       <div className="flex items-center justify-between p-3 border-b sticky top-0 bg-white z-10">
-        <h4 className="text-sm font-medium">Suggested Change</h4>
+        <div className={`flex items-center ${getIssueColor()} px-2.5 py-1 rounded-full`}>
+          {getIssueIcon()}
+          <span className="text-sm font-medium ml-1.5 capitalize">{change.type}</span>
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -82,39 +100,44 @@ export function InlineComment({ change, onClose, onNext }: InlineCommentProps) {
       </div>
       
       <div className="p-4 space-y-3">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="text-sm">
-            <span className="text-muted-foreground">Original:</span>
-            <div className="mt-1 p-2 bg-muted/50 rounded">
+            <span className="text-gray-600">Current Text:</span>
+            <div className="mt-1 p-3 bg-gray-50 rounded text-sm border">
               {change.originalContent}
             </div>
           </div>
           <div className="text-sm">
-            <span className="text-muted-foreground">Suggestion:</span>
-            <div className="mt-1 p-2 bg-green-50 text-green-700 rounded border border-green-100">
+            <span className="text-gray-600">Suggestion:</span>
+            <div className="mt-1 p-3 bg-green-50 text-green-700 rounded border border-green-100">
               {change.content}
             </div>
           </div>
           {change.explanation && (
             <div className="text-sm">
-              <span className="text-muted-foreground">Explanation:</span>
-              <div className="mt-1 p-2 bg-blue-50 text-blue-700 rounded border border-blue-100">
+              <span className="text-gray-600">Explanation:</span>
+              <div className="mt-1 p-3 bg-blue-50 text-blue-700 rounded border border-blue-100">
                 {change.explanation}
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex justify-between items-center pt-2 border-t sticky bottom-0 bg-white z-10">
-          <span className="text-sm text-muted-foreground capitalize">
-            {change.type}
-          </span>
+        <div className="flex justify-between items-center pt-3 border-t sticky bottom-0 bg-white z-10">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            Skip
+          </Button>
           <Button
             size="sm"
             onClick={onNext}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
           >
-            Next
+            Next Issue
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>

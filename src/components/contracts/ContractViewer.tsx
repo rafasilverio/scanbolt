@@ -32,6 +32,7 @@ import { InlineComment } from "./InlineComment";
 import { cn } from "@/lib/utils";
 import { useContractStore } from '@/lib/store/contract-store';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 interface ContractViewerProps {
   contract: Contract;
@@ -113,24 +114,30 @@ export default function ContractViewer({
       change => change.startIndex === highlight.startIndex && 
                 change.endIndex === highlight.endIndex
     );
+
     if (relatedChange) {
       setSelectedChange(relatedChange);
-    }
-    
-    const element = document.getElementById(`highlight-${highlight.id}`);
-    if (element && contentRef.current) {
-      const container = contentRef.current;
-      const elementRect = element.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
       
-      container.scrollTo({
-        top: element.offsetTop - containerRect.height / 2 + elementRect.height / 2,
-        behavior: 'smooth'
-      });
+      const element = document.getElementById(`highlight-${highlight.id}`);
+      if (element && contentRef.current) {
+        const container = contentRef.current;
+        const elementRect = element.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        
+        container.scrollTo({
+          top: element.offsetTop - containerRect.height / 2 + elementRect.height / 2,
+          behavior: 'smooth'
+        });
 
-      // Flash effect
-      element.classList.add('flash-highlight');
-      setTimeout(() => element.classList.remove('flash-highlight'), 1000);
+        // Flash effect
+        element.classList.add('flash-highlight');
+        setTimeout(() => element.classList.remove('flash-highlight'), 1000);
+      }
+    } else {
+      // Feedback visual quando não há change associado
+      toast.info("No suggested changes available for this highlight", {
+        description: "This is an informational highlight only."
+      });
     }
   };
 

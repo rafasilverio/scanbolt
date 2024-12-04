@@ -172,6 +172,29 @@ Make sure to use the exact position of each issue in the text using string index
       type: ['critical', 'warning', 'improvement'].includes(c.type) ? c.type : 'improvement'
     }));
 
+    // Garantir que cada highlight tenha um change associado
+    highlights.forEach(highlight => {
+      const hasAssociatedChange = changes.some(
+        change => change.startIndex === highlight.startIndex && 
+                 change.endIndex === highlight.endIndex
+      );
+
+      if (!hasAssociatedChange) {
+        changes.push({
+          id: crypto.randomUUID(),
+          content: highlight.suggestion,
+          originalContent: text.substring(highlight.startIndex, highlight.endIndex),
+          explanation: highlight.message,
+          suggestion: highlight.suggestion,
+          reason: highlight.message,
+          type: highlight.type,
+          startIndex: highlight.startIndex,
+          endIndex: highlight.endIndex,
+          status: 'pending'
+        });
+      }
+    });
+
     if (highlights.length === 0) {
       highlights.push({
         id: crypto.randomUUID(),
