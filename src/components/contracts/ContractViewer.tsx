@@ -118,11 +118,32 @@ export default function ContractViewer({
 
         // Selecionar primeira issue automaticamente
         if (validHighlights.length > 0) {
-          const firstHighlight = validHighlights[0];
-          const firstChange = processedChanges[0];
+          // Ordenar highlights por criticidade
+          const sortedHighlights = [...validHighlights].sort((a, b) => {
+            const priority = { critical: 0, warning: 1, improvement: 2 };
+            return priority[a.type as keyof typeof priority] - priority[b.type as keyof typeof priority];
+          });
+
+          const firstHighlight = sortedHighlights[0];
           
+          // Encontrar o change correspondente ao highlight
+          const correspondingChange = processedChanges.find(
+            change => change.startIndex === firstHighlight.startIndex && 
+                      change.endIndex === firstHighlight.endIndex
+          ) || {
+            // Fallback para criar um change se não encontrar correspondência
+            id: firstHighlight.id,
+            type: firstHighlight.type,
+            content: firstHighlight.suggestion || '',
+            originalContent: firstHighlight.message || '',
+            explanation: firstHighlight.message,
+            startIndex: firstHighlight.startIndex,
+            endIndex: firstHighlight.endIndex,
+            status: 'pending'
+          };
+
           setSelectedHighlight(firstHighlight);
-          setSelectedChange(firstChange);
+          setSelectedChange(correspondingChange);
         }
 
       } catch (error) {
