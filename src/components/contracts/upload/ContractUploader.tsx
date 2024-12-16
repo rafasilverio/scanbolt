@@ -7,9 +7,14 @@ import { Button } from "@/components/ui/button";
 export function ContractUploader() {
   return (
     <div className="border-2 border-dashed border-[#BFDBFE]/30 rounded-xl p-12 bg-[#2563EB]/10 max-w-4xl mx-auto">
-      {/* Use existing UploadZone with custom styling */}
       <div className="flex flex-col items-center gap-4">
-        <UploadZone />
+        <UploadZone 
+          accept={{
+            'application/pdf': ['.pdf'],
+            'text/plain': ['.txt']
+          }}
+          maxSize={10 * 1024 * 1024} // 10MB limit
+        />
         
         {/* Import buttons */}
         <div className="flex gap-4 mt-4">
@@ -35,6 +40,10 @@ export function ContractUploader() {
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-[#22C55E] rounded-full" />
           <span>Secure Upload</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-[#22C55E] rounded-full" />
+          <span>PDF & TXT Support</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-[#22C55E] rounded-full" />

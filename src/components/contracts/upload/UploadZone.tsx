@@ -86,12 +86,6 @@ export function UploadZone() {
   };
 
   const handleUpload = async (file: File) => {
-    if (!session) {
-      localStorage.setItem('pendingUpload', file.name);
-      router.push('/auth/register');
-      return;
-    }
-
     try {
       setLoading(true);
       setProgress(0);
@@ -99,7 +93,7 @@ export function UploadZone() {
       
       // Simulate upload progress
       const uploadTimer = setInterval(() => {
-        setProgress(prev => Math.min(prev + 5, 90)); // Go up to 90%
+        setProgress(prev => Math.min(prev + 5, 90));
       }, 200);
 
       const formData = new FormData();
@@ -112,9 +106,18 @@ export function UploadZone() {
         throw new Error(data.error || 'Invalid response from server');
       }
 
-      setProgress(100); // Complete the progress
+      setProgress(100);
 
-      // Wait for processing animation to complete (about 30 seconds total)
+      // Novo fluxo: Se não estiver autenticado, redireciona para preview
+      if (!session) {
+        setTimeout(() => {
+          toast.success('Contract analyzed! Register to see the results.');
+          router.push(`/preview/${data.tempId}`);
+        }, 30000);
+        return;
+      }
+
+      // Fluxo existente para usuários autenticados
       setTimeout(() => {
         if (data.success && data.contract) {
           toast.success('Contract uploaded successfully!');
@@ -141,7 +144,7 @@ export function UploadZone() {
     }
     return {
       main: "Drag and drop your contract here",
-      sub: "or browse files"
+      sub: "or"
     };
   };
 
@@ -172,7 +175,7 @@ export function UploadZone() {
                 <Button
                   variant="ghost"
                   onClick={() => document.getElementById('file-upload')?.click()}
-                  className="text-[#BFDBFE] hover:text-white hover:bg-[#2563EB]/20"
+                  className="bg-sky-600 hover:bg-sky-400"
                 >
                   Browse files
                 </Button>
@@ -222,11 +225,11 @@ export function UploadZone() {
               </div>
             )}
             <Button
-              className="w-full bg-[#2563EB] hover:bg-[#1E40AF]"
+              className="w-full bg-[#179401] hover:bg-[#07b81c] my-2 rounded-lg"
               onClick={() => handleUpload(file)}
               disabled={loading}
             >
-              {loading ? 'Processing...' : 'Analyze Contract'}
+              {loading ? 'Processing...' : 'Analyze Contract Now'}
             </Button>
           </div>
         )}

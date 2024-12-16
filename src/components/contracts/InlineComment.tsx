@@ -18,22 +18,19 @@ export function InlineComment({ change, onClose, onNext }: InlineCommentProps) {
   useEffect(() => {
     const calculatePosition = () => {
       const highlightElement = document.getElementById(`highlight-${change.id}`);
-      const documentWrapper = document.querySelector('.max-w-4xl');
+      const documentContent = document.querySelector('.prose');
       
-      if (!highlightElement || !documentWrapper) return;
+      if (!highlightElement || !documentContent) return;
 
       const highlightRect = highlightElement.getBoundingClientRect();
-      const wrapperRect = documentWrapper.getBoundingClientRect();
+      const contentRect = documentContent.getBoundingClientRect();
 
-      let top = highlightRect.top - wrapperRect.top;
-      top = top + (highlightRect.height / 2) - 200;
-      
-      if (top < 0) top = 0;
-      if (top > wrapperRect.height - 400) top = wrapperRect.height - 400;
+      let top = highlightRect.top - contentRect.top;
+      top = Math.max(0, Math.min(top, contentRect.height - 400));
 
       setPosition({
         top,
-        right: -340
+        right: 16
       });
 
       highlightElement.scrollIntoView({
@@ -44,7 +41,17 @@ export function InlineComment({ change, onClose, onNext }: InlineCommentProps) {
 
     calculatePosition();
     window.addEventListener('resize', calculatePosition);
-    return () => window.removeEventListener('resize', calculatePosition);
+    const contentContainer = document.querySelector('.overflow-y-auto');
+    if (contentContainer) {
+      contentContainer.addEventListener('scroll', calculatePosition);
+    }
+
+    return () => {
+      window.removeEventListener('resize', calculatePosition);
+      if (contentContainer) {
+        contentContainer.removeEventListener('scroll', calculatePosition);
+      }
+    };
   }, [change.id]);
 
   const getIssueIcon = () => {
@@ -77,7 +84,7 @@ export function InlineComment({ change, onClose, onNext }: InlineCommentProps) {
       transition={{ duration: 0.2 }}
       className="absolute z-50 bg-white rounded-lg shadow-lg border"
       style={{
-        width: "320px",
+        width: "300px",
         top: position.top,
         right: position.right,
         maxHeight: "400px",
@@ -135,7 +142,7 @@ export function InlineComment({ change, onClose, onNext }: InlineCommentProps) {
           <Button
             size="sm"
             onClick={onNext}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            className="flex items-center gap-2 text-white bg-blue-600 hover:bg-blue-700"
           >
             Next Issue
             <ArrowRight className="h-4 w-4" />

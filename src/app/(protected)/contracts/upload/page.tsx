@@ -8,7 +8,9 @@ export default function UploadPage() {
         <p className="text-gray-500 text-center">
           Upload your contract to get started with AI-powered analysis
         </p>
-        <UploadZone />
+        <div className="bg-primary rounded p-2">
+          <UploadZone />
+        </div>
       </div>
     </div>
   );

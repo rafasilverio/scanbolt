@@ -125,6 +125,8 @@ Contrato:
 - IA Gerar o tipo de contrato
 
 
-## 02 - 
+3 pilares:
+- Analisa
+- Revisa/Reescreve
+- Envia para as partes
 
-## 03 - AI 

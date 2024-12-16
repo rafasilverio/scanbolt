@@ -40,7 +40,7 @@ export function DocumentWrapper({ children, className, contract }: DocumentWrapp
         className={cn(
           "bg-white shadow-lg rounded-b-lg",
           "min-h-[1056px] w-full",
-          "p-16",
+          "p-16 relative",
           className
         )}
       >

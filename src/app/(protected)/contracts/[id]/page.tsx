@@ -148,6 +148,8 @@ export default function ContractPage() {
     return <div className="p-6">Contract not found</div>;
   }
 
+  console.log('Initial contract data:', contract);
+
   return (
     <div className="h-full">
       <div className="w-full bg-gradient-to-b from-[#5000f7] to-[#2563EB] px-6 py-8">
@@ -165,6 +167,7 @@ export default function ContractPage() {
           />
         </div>
       </div>
+      
       <ContractViewer 
         contract={contract} 
         onGenerateRevision={handleGenerateRevision}

@@ -82,20 +82,52 @@ export default function ContractViewer({
   // Initialize store with initial contract data
   useEffect(() => {
     if (initialContract) {
-      const parsedContract = {
-        ...initialContract,
-        highlights: Array.isArray(initialContract.highlights) 
-          ? initialContract.highlights 
+      try {
+        // Processar highlights
+        const processedHighlights = Array.isArray(initialContract.highlights)
+          ? initialContract.highlights
           : typeof initialContract.highlights === 'string'
             ? JSON.parse(initialContract.highlights)
-            : [],
-        changes: Array.isArray(initialContract.changes)
+            : [];
+
+        // Processar changes
+        const processedChanges = Array.isArray(initialContract.changes)
           ? initialContract.changes
           : typeof initialContract.changes === 'string'
             ? JSON.parse(initialContract.changes)
-            : []
-      };
-      setContract(parsedContract);
+            : [];
+
+        const validHighlights = processedHighlights.map(h => ({
+          id: h.id,
+          type: h.type,
+          message: h.message,
+          suggestion: h.suggestion,
+          startIndex: Number(h.startIndex || 0),
+          endIndex: Number(h.endIndex || 10)
+        }));
+
+        const parsedContract = {
+          ...initialContract,
+          highlights: validHighlights,
+          changes: processedChanges
+        };
+
+        setContract(parsedContract);
+
+        console.log(validHighlights);
+
+        // Selecionar primeira issue automaticamente
+        if (validHighlights.length > 0) {
+          const firstHighlight = validHighlights[0];
+          const firstChange = processedChanges[0];
+          
+          setSelectedHighlight(firstHighlight);
+          setSelectedChange(firstChange);
+        }
+
+      } catch (error) {
+        console.error('Error processing contract data:', error);
+      }
     }
   }, [initialContract, setContract]);
 
@@ -110,34 +142,34 @@ export default function ContractViewer({
   const handleHighlightClick = (highlight: Highlight) => {
     setSelectedHighlight(highlight);
     
-    const relatedChange = storeContract?.changes?.find(
-      change => change.startIndex === highlight.startIndex && 
-                change.endIndex === highlight.endIndex
-    );
+    // Criar um AIChange a partir do highlight se não houver um change relacionado
+    const change: AIChange = {
+      id: highlight.id,
+      type: highlight.type,
+      content: highlight.suggestion || '',
+      originalContent: highlight.message || '',
+      explanation: highlight.message,
+      startIndex: highlight.startIndex,
+      endIndex: highlight.endIndex,
+      status: 'pending'
+    };
 
-    if (relatedChange) {
-      setSelectedChange(relatedChange);
+    setSelectedChange(change);
+    
+    const element = document.getElementById(`highlight-${highlight.id}`);
+    if (element && contentRef.current) {
+      const container = contentRef.current;
+      const elementRect = element.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
       
-      const element = document.getElementById(`highlight-${highlight.id}`);
-      if (element && contentRef.current) {
-        const container = contentRef.current;
-        const elementRect = element.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        
-        container.scrollTo({
-          top: element.offsetTop - containerRect.height / 2 + elementRect.height / 2,
-          behavior: 'smooth'
-        });
-
-        // Flash effect
-        element.classList.add('flash-highlight');
-        setTimeout(() => element.classList.remove('flash-highlight'), 1000);
-      }
-    } else {
-      // Feedback visual quando não há change associado
-      toast.info("No suggested changes available for this highlight", {
-        description: "This is an informational highlight only."
+      container.scrollTo({
+        top: element.offsetTop - containerRect.height / 2 + elementRect.height / 2,
+        behavior: 'smooth'
       });
+
+      // Flash effect
+      element.classList.add('flash-highlight');
+      setTimeout(() => element.classList.remove('flash-highlight'), 1000);
     }
   };
 
@@ -253,15 +285,17 @@ export default function ContractViewer({
     }
   };
 
-  // Add this function to filter highlights based on selected type
+  // Filtrar highlights baseado no tipo selecionado (sem filtrar por índices)
   const filteredHighlights = useMemo(() => {
-    if (!storeContract?.highlights || !selectedIssueType) {
-      return storeContract?.highlights || [];
-    }
-
-    return storeContract.highlights.filter(
-      highlight => highlight.type === selectedIssueType
+    if (!storeContract?.highlights) return [];
+    
+    const highlights = storeContract.highlights.filter(h => 
+      h.type && h.id // Mantém apenas a validação básica
     );
+    
+    return selectedIssueType
+      ? highlights.filter(h => h.type === selectedIssueType)
+      : highlights;
   }, [storeContract?.highlights, selectedIssueType]);
 
   const getPageCount = (content?: string): number => {
@@ -306,25 +340,16 @@ export default function ContractViewer({
                 transition: 'transform 0.2s ease-in-out'
               }}
             >
-              <DocumentWrapper contract={storeContract || undefined}>
+              <DocumentWrapper contract={storeContract}>
                 <div className="relative">
                   <ContractContent
-                    contract={storeContract || undefined}
+                    contract={storeContract}
                     selectedHighlight={selectedHighlight}
                     selectedChange={selectedChange}
                     onChangeSelect={setSelectedChange}
                     highlights={filteredHighlights}
                     onHighlightClick={handleHighlightClick}
                   />
-                  <AnimatePresence>
-                    {selectedChange && (
-                      <InlineComment
-                        change={selectedChange}
-                        onClose={() => setSelectedChange(null)}
-                        onNext={handleNext}
-                      />
-                    )}
-                  </AnimatePresence>
                 </div>
               </DocumentWrapper>
             </div>
@@ -340,7 +365,7 @@ export default function ContractViewer({
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-80 border-l bg-white overflow-y-auto">
+      <div className="w-80 border-l bg-white overflow-y-auto my-4">
         <div className="p-4">
           <StatsHeader 
             contract={{
