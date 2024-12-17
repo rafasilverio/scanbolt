@@ -81,68 +81,85 @@ export function InlineComment({ change, onClose, onNext }: InlineCommentProps) {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.2 }}
-      className="absolute z-50 bg-white rounded-lg shadow-lg border"
+      className="absolute z-50 rounded-2xl shadow-xl flex flex-col overflow-hidden"
       style={{
-        width: "300px",
+        width: "400px",
         top: position.top,
         right: position.right,
-        maxHeight: "400px",
-        overflow: "auto"
+        maxHeight: "500px",
       }}
     >
-      <div className="flex items-center justify-between p-3 border-b sticky top-0 bg-white z-10">
-        <div className={`flex items-center ${getIssueColor()} px-2.5 py-1 rounded-full`}>
-          {getIssueIcon()}
-          <span className="text-sm font-medium ml-1.5 capitalize">{change.type}</span>
+      <div className="flex items-center justify-between p-4 sticky top-0 bg-[#4F46E5] z-10">
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="w-6 h-6 text-red-400" />
+          <h2 className="text-xl font-semibold text-white">
+            {change.type === 'critical' ? 'Critical Issues Detected' : 'Issue Detected'}
+          </h2>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 text-white hover:bg-[#6366F1]"
           onClick={onClose}
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </Button>
       </div>
-      
-      <div className="p-4 space-y-3">
-        <div className="space-y-3">
-          <div className="text-sm">
-            <span className="text-gray-600">Current Text:</span>
-            <div className="mt-1 p-3 bg-gray-50 rounded text-sm border">
-              {change.originalContent}
-            </div>
-          </div>
-          <div className="text-sm">
-            <span className="text-gray-600">Suggestion:</span>
-            <div className="mt-1 p-3 bg-green-50 text-green-700 rounded border border-green-100">
-              {change.content}
-            </div>
-          </div>
-          {change.explanation && (
-            <div className="text-sm">
-              <span className="text-gray-600">Explanation:</span>
-              <div className="mt-1 p-3 bg-blue-50 text-blue-700 rounded border border-blue-100">
-                {change.explanation}
+
+      <div className="flex-1 overflow-y-auto bg-[#5B54E8]">
+        <div className="p-6 space-y-4">
+          <div className="space-y-4">
+            <div>
+              <span className="text-sm font-medium text-white/90">Current Text:</span>
+              <div className="mt-2 p-3 bg-red-600/25 text-red-50 rounded-xl border border-red-400/40">
+                {change.originalContent}
               </div>
             </div>
-          )}
-        </div>
+            {change.explanation && (
+              <div>
+                <span className="text-sm font-medium text-white/90">Explanation:</span>
+                <div className="mt-2 p-3 bg-red-600/25 text-red-50 rounded-xl border border-red-400/40">
+                  {change.explanation}
+                </div>
+              </div>
+            )}
+            <div>
+              <span className="text-sm font-medium text-white/90">AI Suggestion:</span>
+              <div className="mt-2 p-3 bg-green-500/20 text-green-200 rounded-xl border border-green-500/30">
+                {change.content}
+              </div>
+            </div>
+          </div>
 
-        <div className="flex justify-between items-center pt-3 border-t sticky bottom-0 bg-white z-10">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            Skip
-          </Button>
+          <div className="py-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                <span className="text-green-300 text-xl">✓</span>
+              </div>
+              <span className="text-sm text-white/80">AI-powered analysis</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                <span className="text-green-300 text-xl">✓</span>
+              </div>
+              <span className="text-sm text-white/80">Instant risk identification</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                <span className="text-green-300 text-xl">✓</span>
+              </div>
+              <span className="text-sm text-white/80">Professional suggestions</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 p-4 border-t border-white/10 bg-[#4F46E5]">
+        <div className="flex justify-end items-center">
           <Button
             size="sm"
             onClick={onNext}
-            className="flex items-center gap-2 text-white bg-blue-600 hover:bg-blue-700"
+            className="bg-white text-[#4F46E5] hover:bg-white/90 flex items-center gap-2"
           >
             Next Issue
             <ArrowRight className="h-4 w-4" />
