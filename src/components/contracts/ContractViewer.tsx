@@ -29,6 +29,7 @@ import { DocumentWrapper } from "./DocumentWrapper";
 import { ContractContent } from "./ContractContent";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { InlineComment } from "./InlineComment";
+import { RestrictedInlineComment } from "./RestrictedInlineComment";
 import { cn } from "@/lib/utils";
 import { useContractStore } from '@/lib/store/contract-store';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -52,6 +53,7 @@ export default function ContractViewer({
   const [selectedIssueType, setSelectedIssueType] = useState<HighlightType | null>(null);
   const [zoom, setZoom] = useState(110);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [isFirstIssue, setIsFirstIssue] = useState(true);
   
   const { 
     contract: storeContract, 
@@ -125,13 +127,13 @@ export default function ContractViewer({
           });
 
           const firstHighlight = sortedHighlights[0];
+          const isFirstCritical = firstHighlight.type === 'critical';
           
-          // Encontrar o change correspondente ao highlight
+          // Encontrar o change correspondente
           const correspondingChange = processedChanges.find(
             change => change.startIndex === firstHighlight.startIndex && 
                       change.endIndex === firstHighlight.endIndex
           ) || {
-            // Fallback para criar um change se não encontrar correspondência
             id: firstHighlight.id,
             type: firstHighlight.type,
             content: firstHighlight.suggestion || '',
@@ -144,6 +146,7 @@ export default function ContractViewer({
 
           setSelectedHighlight(firstHighlight);
           setSelectedChange(correspondingChange);
+          setIsFirstIssue(isFirstCritical);
         }
 
       } catch (error) {
@@ -160,62 +163,54 @@ export default function ContractViewer({
     router.push(`/contracts/${storeContract.id}/revision`);
   };
 
+  // Função para verificar se é primeira issue crítica
+  const checkIfFirstCritical = (highlight: Highlight) => {
+    if (!storeContract?.highlights) return false;
+    
+    return highlight.type === 'critical' && 
+      !storeContract.highlights.some(h => 
+        h.type === 'critical' && 
+        h.startIndex < highlight.startIndex
+      );
+  };
+
   const handleHighlightClick = (highlight: Highlight) => {
-    setSelectedHighlight(highlight);
-    
-    // Criar um AIChange a partir do highlight se não houver um change relacionado
-    const change: AIChange = {
-      id: highlight.id,
-      type: highlight.type,
-      content: highlight.suggestion || '',
-      originalContent: highlight.message || '',
-      explanation: highlight.message,
-      startIndex: highlight.startIndex,
-      endIndex: highlight.endIndex,
-      status: 'pending'
-    };
+    if (!storeContract?.changes) return;
 
-    setSelectedChange(change);
-    
-    const element = document.getElementById(`highlight-${highlight.id}`);
-    if (element && contentRef.current) {
-      const container = contentRef.current;
-      const elementRect = element.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      
-      container.scrollTo({
-        top: element.offsetTop - containerRect.height / 2 + elementRect.height / 2,
-        behavior: 'smooth'
-      });
+    const change = storeContract.changes.find(
+      c => c.startIndex === highlight.startIndex && c.endIndex === highlight.endIndex
+    );
 
-      // Flash effect
-      element.classList.add('flash-highlight');
-      setTimeout(() => element.classList.remove('flash-highlight'), 1000);
+    if (change) {
+      const isCriticalFirst = checkIfFirstCritical(highlight);
+      setIsFirstIssue(isCriticalFirst);
+      setSelectedHighlight(highlight);
+      setSelectedChange(change);
     }
   };
 
   const handleNext = () => {
-    if (!storeContract?.changes || !selectedChange) return;
+    if (!storeContract?.changes || !selectedHighlight) return;
     
-    // Find current index
-    const currentIndex = storeContract.changes.findIndex(
-      change => change.id === selectedChange.id
-    );
-    
-    // Get next change (or wrap around to first)
-    const nextIndex = (currentIndex + 1) % storeContract.changes.length;
-    const nextChange = storeContract.changes[nextIndex];
-    
-    // Find corresponding highlight
-    const nextHighlight = storeContract.highlights.find(
-      h => h.startIndex === nextChange.startIndex && h.endIndex === nextChange.endIndex
-    );
-    
-    if (nextHighlight) {
-      handleHighlightClick(nextHighlight);
+    const currentIndex = filteredHighlights.findIndex(h => h.id === selectedHighlight.id);
+    if (currentIndex < filteredHighlights.length - 1) {
+      const nextHighlight = filteredHighlights[currentIndex + 1];
+      const nextChange = storeContract.changes.find(
+        c => c.startIndex === nextHighlight.startIndex && c.endIndex === nextHighlight.endIndex
+      );
+      
+      if (nextChange) {
+        const isNextCriticalFirst = checkIfFirstCritical(nextHighlight);
+        setIsFirstIssue(isNextCriticalFirst);
+        setSelectedHighlight(nextHighlight);
+        setSelectedChange(nextChange);
+      }
     }
-    
-    setSelectedChange(nextChange);
+  };
+
+  const handleClose = () => {
+    setSelectedHighlight(null);
+    setSelectedChange(null);
   };
 
   // Check if there are any changes at all
@@ -324,6 +319,12 @@ export default function ContractViewer({
     return Math.max(1, Math.ceil((content.length) / 3000));
   };
 
+  // Adicionar handler para upgrade
+  const handleUpgrade = () => {
+    // Implementação futura do Stripe
+    console.log("Upgrade clicked");
+  };
+
   return (
     <div className="h-full flex">
       {/* Main Content Area */}
@@ -370,6 +371,10 @@ export default function ContractViewer({
                     onChangeSelect={setSelectedChange}
                     highlights={filteredHighlights}
                     onHighlightClick={handleHighlightClick}
+                    isFirstIssue={isFirstIssue}
+                    onUpgrade={handleUpgrade}
+                    onNext={handleNext}
+                    onClose={handleClose}
                   />
                 </div>
               </DocumentWrapper>

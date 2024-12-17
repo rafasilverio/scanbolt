@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Contract, AIChange, Highlight } from "@/types/contract";
 import { cn } from "@/lib/utils";
 import { InlineComment } from "./InlineComment";
+import { RestrictedInlineComment } from "./RestrictedInlineComment";
 import { useMemo } from 'react';
 
 interface ContractContentProps {
@@ -13,6 +14,10 @@ interface ContractContentProps {
   onChangeSelect: (change: AIChange | null) => void;
   highlights: Highlight[];
   onHighlightClick: (highlight: Highlight) => void;
+  isFirstIssue: boolean;
+  onUpgrade: () => void;
+  onNext: () => void;
+  onClose: () => void;
 }
 
 export function ContractContent({ 
@@ -21,7 +26,11 @@ export function ContractContent({
   selectedChange, 
   onChangeSelect,
   highlights,
-  onHighlightClick
+  onHighlightClick,
+  isFirstIssue,
+  onUpgrade,
+  onNext,
+  onClose
 }: ContractContentProps) {
   
   const processedHighlights = useMemo(() => {
@@ -90,6 +99,22 @@ export function ContractContent({
     });
   };
 
+  const handleNext = () => {
+    const currentIndex = highlights.findIndex(h => h.id === selectedHighlight?.id);
+    if (currentIndex < highlights.length - 1) {
+      const nextHighlight = highlights[currentIndex + 1];
+      // Encontrar o change correspondente
+      const nextChange = contract?.changes?.find(
+        c => c.startIndex === nextHighlight.startIndex && c.endIndex === nextHighlight.endIndex
+      );
+      
+      if (nextChange) {
+        onChangeSelect(nextChange);
+        onHighlightClick(nextHighlight);
+      }
+    }
+  };
+
   return (
     <div className="relative prose max-w-none">
       <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed relative">
@@ -98,16 +123,20 @@ export function ContractContent({
 
       <AnimatePresence>
         {selectedChange && (
-          <InlineComment
-            change={selectedChange}
-            onClose={() => onChangeSelect(null)}
-            onNext={() => {
-              const currentIndex = highlights.findIndex(h => h.id === selectedHighlight?.id);
-              if (currentIndex < highlights.length - 1) {
-                onHighlightClick(highlights[currentIndex + 1]);
-              }
-            }}
-          />
+          isFirstIssue ? (
+            <InlineComment
+              change={selectedChange}
+              onClose={onClose}
+              onNext={onNext}
+            />
+          ) : (
+            <RestrictedInlineComment
+              change={selectedChange}
+              onClose={onClose}
+              onNext={onNext}
+              onUpgrade={onUpgrade}
+            />
+          )
         )}
       </AnimatePresence>
     </div>

@@ -395,13 +395,8 @@ Output the fully formatted contract text.`
 
 async function analyzeContract(text: string): Promise<{ highlights: Highlight[], changes: AIChange[] }> {
   try {
-    // Preprocess the contract text to improve formatting
+    // Preprocess do texto antes da análise
     const formattedText = preprocessContractText(text);
-
-    // Add timeout for OpenAI call
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('OpenAI timeout')), 60000);
-    });
 
     const analysisPromise = openai.chat.completions.create({
       max_tokens: 2000,
@@ -414,7 +409,7 @@ async function analyzeContract(text: string): Promise<{ highlights: Highlight[],
 
 1. Analyze the provided contract text for issues and improvements.
 2. Suggest additional essential clauses that are missing, if any.
-3. Provide comprehensive feedback regardless of the contract's length.
+3. Provide comprehensive feedback regardless of contract length.
 4. Prioritize highlights and changes by type: critical > warning > improvement.
 5. When identifying issues, reference the entire sentence or paragraph containing the issue.
 6. Ensure proper indexing rules:
@@ -423,24 +418,24 @@ async function analyzeContract(text: string): Promise<{ highlights: Highlight[],
    - For missing clauses, suggest the insertion point by referencing the most logical adjacent paragraph.
 7. For short contracts, suggest additional clauses and sections to enhance legal soundness.
 
-Ensure suggestions follow legal best practices. Return the result as a valid JSON object, strictly adhering to the following structure:
+Return the result as a valid JSON object with the following structure:
 {
   "highlights": [
     {
       "type": "critical" | "warning" | "improvement",
       "message": "Clear description of the issue",
-      "suggestion": "Detailed suggestion including complete clause text when appropriate",
+      "suggestion": "Detailed suggestion including complete clause text",
       "startIndex": number,
       "endIndex": number
     }
   ],
   "changes": [
     {
-      "content": "Complete suggested text including new clauses",
-      "originalContent": "Exact text to be replaced (must match text.substring(startIndex, endIndex))",
-      "explanation": "Detailed explanation of why this change or addition is needed",
-      "suggestion": "Specific implementation guidance",
-      "reason": "Legal and business reasoning for the change",
+      "content": "Complete suggested text",
+      "originalContent": "Exact text to be replaced",
+      "explanation": "Detailed explanation",
+      "suggestion": "Implementation guidance",
+      "reason": "Legal reasoning",
       "type": "critical" | "warning" | "improvement",
       "startIndex": number,
       "endIndex": number,
@@ -451,68 +446,106 @@ Ensure suggestions follow legal best practices. Return the result as a valid JSO
         },
         {
           role: "user",
-          content: `Analyze this contract and provide comprehensive feedback:
-
-Contract to analyze: ${formattedText}`
+          content: `Analyze this contract: ${formattedText}`
         }
       ],
       response_format: { type: "json_object" }
     });
 
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Analysis timeout')), 60000);
+    });
+
     const response = await Promise.race([analysisPromise, timeoutPromise]) as OpenAI.Chat.Completions.ChatCompletion;
+    const analysis = JSON.parse(response.choices[0]?.message?.content || '{"highlights":[],"changes":[]}');
 
-    let analysis;
-    try {
-      analysis = JSON.parse(response.choices[0]?.message?.content || '{"highlights":[],"changes":[]}');
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      return { highlights: [], changes: [] };
-    }
+    let { highlights, changes } = analysis;
 
-    const highlights = (analysis.highlights || []).map((h: Omit<Highlight, 'id'>) => ({
-      ...h,
-      id: crypto.randomUUID(),
-      type: ['critical', 'warning', 'improvement'].includes(h.type) ? h.type : 'improvement'
+    // Garantir que cada highlight tenha um change correspondente
+    highlights = highlights.map(highlight => {
+      const relatedChange = changes.find(change => 
+        change.suggestion === highlight.suggestion ||
+        (change.startIndex === highlight.startIndex && change.endIndex === highlight.endIndex)
+      );
+
+      if (!relatedChange) {
+        const newChange: AIChange = {
+          id: crypto.randomUUID(),
+          content: highlight.suggestion,
+          originalContent: formattedText.substring(highlight.startIndex, highlight.endIndex),
+          explanation: highlight.message,
+          suggestion: highlight.suggestion,
+          reason: highlight.message,
+          type: highlight.type,
+          startIndex: highlight.startIndex,
+          endIndex: highlight.endIndex,
+          status: 'pending'
+        };
+        changes.push(newChange);
+      }
+
+      return {
+        ...highlight,
+        id: highlight.id || crypto.randomUUID(),
+        startIndex: highlight.startIndex >= 0 ? highlight.startIndex : 0,
+        endIndex: highlight.endIndex > highlight.startIndex ? highlight.endIndex : highlight.startIndex + 10
+      };
+    });
+
+    // Garantir que todos os changes tenham índices válidos
+    changes = changes.map(change => ({
+      ...change,
+      id: change.id || crypto.randomUUID(),
+      startIndex: change.startIndex >= 0 ? change.startIndex : 0,
+      endIndex: change.endIndex > change.startIndex ? change.endIndex : change.startIndex + 10,
+      status: 'pending'
     }));
 
-    const changes = (analysis.changes || []).map((c: Omit<AIChange, 'id' | 'status'>) => ({
-      ...c,
-      id: crypto.randomUUID(),
-      status: 'pending',
-      type: ['critical', 'warning', 'improvement'].includes(c.type) ? c.type : 'improvement'
-    }));
+    // Validações finais
+    const validResults = {
+      highlights: highlights.filter(h => 
+        h.startIndex >= 0 && 
+        h.endIndex > h.startIndex &&
+        h.type && 
+        h.message
+      ),
+      changes: changes.filter(c => 
+        c.startIndex >= 0 && 
+        c.endIndex > c.startIndex &&
+        c.content &&
+        c.type
+      )
+    };
 
-    // Ensure at least one critical or warning highlight exists
-    const hasCriticalOrWarning = highlights.some(h => h.type === 'critical' || h.type === 'warning');
-
-    if (!hasCriticalOrWarning) {
-      const artificialHighlight = {
+    // Garantir pelo menos um resultado
+    if (!validResults.highlights.length) {
+      const defaultHighlight = {
         id: crypto.randomUUID(),
-        type: 'critical',
-        message: 'Critical issue: The contract lacks clarity in several key areas.',
-        suggestion: 'Consider adding specific clauses for payment terms, liability, and confidentiality to ensure legal compliance.',
+        type: 'warning',
+        message: 'Review recommended',
+        suggestion: 'Consider legal review',
         startIndex: 0,
-        endIndex: formattedText.length > 100 ? 100 : formattedText.length // Cover the first part of the text as a placeholder
+        endIndex: formattedText.length
       };
 
-      const artificialChange = {
+      const defaultChange = {
         id: crypto.randomUUID(),
-        content: 'Add clauses detailing payment terms, liability, and confidentiality.',
-        originalContent: '',
-        explanation: 'The absence of these clauses can result in legal disputes and lack of enforceability.',
-        suggestion: 'Insert detailed clauses covering payment terms, liability, and confidentiality.',
-        reason: 'Ensures the contract is comprehensive and legally binding.',
-        type: 'critical',
-        startIndex: artificialHighlight.startIndex,
-        endIndex: artificialHighlight.endIndex,
+        type: 'warning',
+        content: 'Consider legal review',
+        originalContent: formattedText.substring(0, Math.min(100, formattedText.length)),
+        explanation: 'Review recommended',
+        suggestion: 'Consider legal review',
+        reason: 'Document may need professional review',
+        startIndex: 0,
+        endIndex: formattedText.length,
         status: 'pending'
       };
 
-      highlights.push(artificialHighlight);
-      changes.push(artificialChange);
+      validResults.highlights.push(defaultHighlight);
+      validResults.changes.push(defaultChange);
     }
 
-    return { highlights, changes };
+    return validResults;
 
   } catch (error) {
     console.error('Analysis error:', error);
@@ -520,12 +553,23 @@ Contract to analyze: ${formattedText}`
       highlights: [{
         id: crypto.randomUUID(),
         type: 'warning',
-        message: 'Analysis timeout - please try again',
-        suggestion: 'Upload a smaller document or try again later',
+        message: 'Analysis error - please try again',
+        suggestion: 'Upload the document again or try a different format',
         startIndex: 0,
         endIndex: text.length
       }],
-      changes: []
+      changes: [{
+        id: crypto.randomUUID(),
+        type: 'warning',
+        content: 'Please try again',
+        originalContent: text.substring(0, Math.min(100, text.length)),
+        explanation: 'Analysis error occurred',
+        suggestion: 'Try uploading again',
+        reason: 'Technical error during analysis',
+        startIndex: 0,
+        endIndex: text.length,
+        status: 'pending'
+      }]
     };
   }
 }
@@ -640,6 +684,17 @@ export async function POST(req: NextRequest) {
           changes: JSON.stringify(processedChanges),
           userId: user.id
         }
+      });
+
+      console.log('Contract Data:', {
+        highlights: processedHighlights,
+        changes: processedChanges,
+        indices: processedHighlights.map(h => ({
+          id: h.id,
+          start: h.startIndex,
+          end: h.endIndex,
+          text: contract.content.substring(h.startIndex, h.endIndex)
+        }))
       });
 
       return {
