@@ -4085,6 +4085,311 @@ _**Assistant**_
 
 
 
+Vamos remover a lógica de exibição dos comentários inline do `NewContractContent`:
+
+```typescript:src/components/contracts/NewContractContent.tsx
+// ... imports ...
+// Remover import do AnimatePresence, InlineComment e RestrictedInlineComment
+
+interface NewContractContentProps {
+  contract?: Contract;
+  selectedIssue: ContractIssue | null;
+  onIssueClick: (issue: ContractIssue) => void;
+  isFirstIssue: boolean;
+  onUpgrade: () => void;
+  onNext: () => void;
+  onClose: () => void;
+}
+
+export function NewContractContent({
+  contract,
+  selectedIssue,
+  onIssueClick,
+  isFirstIssue,
+  onUpgrade,
+  onNext,
+  onClose
+}: NewContractContentProps) {
+  const [activeTab, setActiveTab] = useState<'issues' | 'suggested'>('issues');
+  const [filteredType, setFilteredType] = useState<IssueType | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const [localSelectedIssue, setLocalSelectedIssue] = useState<ContractIssue | null>(selectedIssue);
+
+  // ... resto do código ...
+
+  return (
+    <div className="flex h-full">
+      {/* Container do PDF */}
+      <div className="flex-1 relative h-full">
+        <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm rounded-lg p-3 mb-4">
+          <FileText className="w-4 h-4 text-gray-500" />
+          <div className="flex-1 text-sm text-gray-600">
+            {contract?.title || 'Untitled'} • {contract?.fileType || 'Unknown'} • {contract?.numPages || '-'} pages
+          </div>
+        </div>
+        <PDFViewer
+          url={pdfUrl}
+          selectedIssue={localSelectedIssue}
+          onIssueClick={handleIssueClick}
+          zoom={zoom}
+          contractInfo={contract}
+          onFilterByType={setFilteredType}
+          isFirstIssue={isFirstIssue}
+          onUpgrade={onUpgrade}
+          onNext={onNext}
+          onClose={onClose}
+        />
+      </div>
+
+      {/* Barra lateral */}
+      <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
+        {/* ... resto do código da barra lateral ... */}
+      </div>
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Removido o import do `AnimatePresence`, `InlineComment` e `RestrictedInlineComment`
+2. Removida a seção de renderização dos comentários inline no final do componente
+3. Mantida toda a lógica de seleção e manipulação de issues
+4. Mantidas as props necessárias para o PDFViewer
+
+Agora o componente está mais focado em sua responsabilidade principal de exibir o conteúdo do contrato e a barra lateral, sem se preocupar com a exibição dos comentários inline.
+
+---
+
+_**User**_
+
+por favor atualize a rota do revision para utilizar o Issue e NewClausules ao invés do Highlight e AiChange
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Vamos atualizar a rota de revision para usar os novos tipos:
+
+```typescript:src/app/api/contracts/[id]/revision/route.ts
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+import { ContractIssue, SuggestedClause } from '@/types/contract';
+import OpenAI from 'openai';
+import { v4 as uuidv4 } from 'uuid';
+
+const openai = new OpenAI();
+
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
+function recalculateIndices(
+  items: Array<{ startIndex: number; endIndex: number }>, 
+  oldContent: string, 
+  newContent: string
+): Array<{ startIndex: number; endIndex: number }> {
+  // ... existing code ...
+}
+
+export async function POST(
+  req: Request,
+  { params }: { params: { id: string } }
+): Promise<Response> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const timeoutPromise = new Promise<Response>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Request timeout'));
+      }, 250000);
+    });
+
+    const processingPromise = async (): Promise<Response> => {
+      const existingContract = await prisma.contract.findUnique({
+        where: { id: params.id }
+      });
+
+      if (!existingContract) {
+        return NextResponse.json(
+          { error: 'Contract not found' },
+          { status: 404 }
+        );
+      }
+
+      await prisma.contract.update({
+        where: { id: params.id },
+        data: { status: 'under_review' }
+      });
+
+      // Parse existing arrays com os novos tipos
+      const existingIssues: ContractIssue[] = JSON.parse(existingContract.issues || '[]');
+      const existingClauses: SuggestedClause[] = JSON.parse(existingContract.suggestedClauses || '[]');
+
+      const { originalContent, changes, issues } = await req.json();
+
+      let intermediateContent = originalContent;
+      const sortedChanges = [...(changes || [])].sort((a, b) => b.startIndex - a.startIndex);
+      
+      for (const change of sortedChanges) {
+        intermediateContent = 
+          intermediateContent.substring(0, change.startIndex) +
+          change.suggestion +
+          intermediateContent.substring(change.endIndex);
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `You are a legal document expert. Analyze the provided contract and suggest improvements with the goal of making the contract more clear, concise, and legally sound.`
+          },
+          {
+            role: "user",
+            content: `Improve this contract and return a JSON response with:
+- finalContent: the complete improved contract text
+- issues: array of new issues with type (critical/warning/improvement), originalText, explanation, newText, startIndex, and endIndex
+- suggestedClauses: array of new clauses with title, explanation, content, startIndex, and endIndex
+
+Contract to improve: ${intermediateContent}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 4000,
+        response_format: { type: "json_object" }
+      });
+
+      const aiContent = response.choices[0]?.message?.content;
+      if (!aiContent) {
+        throw new Error('Empty response from OpenAI');
+      }
+
+      let aiResponse;
+      try {
+        aiResponse = JSON.parse(aiContent);
+      } catch (error) {
+        console.error('Failed to parse AI response:', aiContent);
+        throw new Error('Invalid AI response format');
+      }
+
+      // Recalcular índices para os issues existentes
+      const adjustedExistingIssues = recalculateIndices(
+        existingIssues,
+        originalContent,
+        aiResponse.finalContent
+      );
+
+      // Recalcular índices para as cláusulas existentes
+      const adjustedExistingClauses = recalculateIndices(
+        existingClauses,
+        originalContent,
+        aiResponse.finalContent
+      );
+
+      const newIssues = [
+        ...adjustedExistingIssues,
+        ...(aiResponse.issues || []).map((issue: any) => ({
+          id: uuidv4(),
+          type: issue.type,
+          originalText: issue.originalText,
+          explanation: issue.explanation,
+          newText: issue.newText,
+          startIndex: issue.startIndex,
+          endIndex: issue.endIndex,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        }))
+      ];
+
+      const newClauses = [
+        ...adjustedExistingClauses,
+        ...(aiResponse.suggestedClauses || []).map((clause: any) => ({
+          id: uuidv4(),
+          title: clause.title,
+          explanation: clause.explanation,
+          content: clause.content,
+          startIndex: clause.startIndex,
+          endIndex: clause.endIndex,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        }))
+      ];
+
+      const revisionContract = await prisma.contract.update({
+        where: { id: params.id },
+        data: {
+          content: aiResponse.finalContent,
+          issues: JSON.stringify(newIssues),
+          suggestedClauses: JSON.stringify(newClauses),
+          status: 'approved',
+          updatedAt: new Date()
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        contract: {
+          ...revisionContract,
+          issues: newIssues,
+          suggestedClauses: newClauses,
+          content: aiResponse.finalContent
+        }
+      });
+    };
+
+    return await Promise.race([processingPromise(), timeoutPromise]);
+
+  } catch (error) {
+    console.error('Error in revision generation:', error);
+    
+    await prisma.contract.update({
+      where: { id: params.id },
+      data: {
+        status: 'under_review',
+        updatedAt: new Date()
+      }
+    });
+
+    if (error instanceof Error && error.message === 'Request timeout') {
+      return NextResponse.json({ error: 'Request timed out' }, { status: 504 });
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to generate revision' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+```
+
+Principais mudanças:
+
+1. Substituído `Highlight` e `AIChange` por `ContractIssue` e `SuggestedClause`
+2. Atualizado o parsing dos dados existentes para usar os novos tipos
+3. Atualizado o formato da resposta do OpenAI para incluir `issues` e `suggestedClauses`
+4. Ajustado o mapeamento dos dados retornados pela AI para os novos tipos
+5. Atualizado o formato dos dados salvos no banco
+6. Mantida a lógica de recálculo de índices
+7. Atualizada a estrutura da resposta final
+
+Isso deve alinhar a rota de revision com os novos tipos de dados usados no frontend.
+
+---
+
+_**User**_
+
+ajude-me a corrigir para o novo formato do @contract.ts 
+
 ---
 
 
