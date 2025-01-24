@@ -3,9 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Contract, ContractIssue, IssueType, SuggestedClause } from "@/types/contract";
 import { PDFViewer } from "./PDFViewer";
-import { InlineComment } from "./InlineComment";
-import { RestrictedInlineComment } from "./RestrictedInlineComment";
-import { AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, AlertCircle, Lightbulb, Plus, FileText, CheckCircle, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -59,7 +56,7 @@ function IssuesSummary({ issues, filteredType, setFilteredType }: {
           <AlertCircle className="w-4 h-4 text-yellow-500" />
           <span>Warnings</span>
         </div>
-        <Badge variant="warning">{warningCount}</Badge>
+        <Badge variant="secondary">{warningCount}</Badge>
       </button>
 
       <button
@@ -73,7 +70,7 @@ function IssuesSummary({ issues, filteredType, setFilteredType }: {
           <Lightbulb className="w-4 h-4 text-green-500" />
           <span>Improvements</span>
         </div>
-        <Badge variant="success">{improvementCount}</Badge>
+        <Badge variant="outline">{improvementCount}</Badge>
       </button>
     </div>
   );
@@ -233,14 +230,6 @@ export function NewContractContent({
       if (Array.isArray(contract.issues)) {
         processedIssues = contract.issues;
       }
-      // Tentar obter do campo highlights (nome antigo)
-      else if (Array.isArray(contract.highlights)) {
-        processedIssues = contract.highlights;
-      }
-      // Se for string, tentar parse
-      else if (typeof contract.highlights === 'string') {
-        processedIssues = JSON.parse(contract.highlights);
-      }
       // Se for string no campo issues
       else if (typeof contract.issues === 'string') {
         processedIssues = JSON.parse(contract.issues);
@@ -248,7 +237,6 @@ export function NewContractContent({
 
       console.log('Processed issues from:', {
         fromIssues: contract.issues,
-        fromHighlights: contract.highlights,
         result: processedIssues
       });
 
@@ -270,14 +258,6 @@ export function NewContractContent({
       if (Array.isArray(contract.suggestedClauses)) {
         processedClauses = contract.suggestedClauses;
       }
-      // Tentar obter do campo changes (nome antigo)
-      else if (Array.isArray(contract.changes)) {
-        processedClauses = contract.changes;
-      }
-      // Se for string, tentar parse
-      else if (typeof contract.changes === 'string') {
-        processedClauses = JSON.parse(contract.changes);
-      }
       // Se for string no campo suggestedClauses
       else if (typeof contract.suggestedClauses === 'string') {
         processedClauses = JSON.parse(contract.suggestedClauses);
@@ -285,7 +265,6 @@ export function NewContractContent({
 
       console.log('Processed clauses from:', {
         fromSuggestedClauses: contract.suggestedClauses,
-        fromChanges: contract.changes,
         result: processedClauses
       });
 
@@ -323,6 +302,21 @@ export function NewContractContent({
     console.log('Selected issue changed:', selectedIssue);
   }, [selectedIssue]);
 
+  // Função para transformar o formato da issue para o formato esperado pelo InlineComment
+  const transformIssueToChange = (issue: ContractIssue) => {
+    return {
+      id: issue.id,
+      type: issue.type,
+      content: {
+        text: issue.originalText,
+        explanation: issue.explanation,
+        suggestion: issue.newText
+      },
+      position: issue.position,
+      status: issue.status || 'pending'
+    };
+  };
+
   return (
     <div className="flex h-full">
       {/* Container do PDF */}
@@ -330,7 +324,7 @@ export function NewContractContent({
         <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm rounded-lg p-3 mb-4">
           <FileText className="w-4 h-4 text-gray-500" />
           <div className="flex-1 text-sm text-gray-600">
-            {contract?.title || 'Untitled'} • {contract?.fileType || 'Unknown'} • {contract?.numPages || '-'} pages
+            {contract?.fileName || 'Untitled'} • {contract?.fileType || 'Unknown'} • {contract?.metadata?.pageCount || '-'} pages
           </div>
         </div>
         <PDFViewer
@@ -416,8 +410,8 @@ export function NewContractContent({
               
               <div className="space-y-4">
                 {(issues || [])
-                  .filter(issue => !filteredType || issue.type === filteredType)
-                  .map((issue, index) => (
+                  .filter((issue: ContractIssue) => !filteredType || issue.type === filteredType)
+                  .map((issue: ContractIssue, index: number) => (
                     <IssueItem
                       key={issue.id}
                       issue={issue}
@@ -431,7 +425,7 @@ export function NewContractContent({
             </div>
           ) : (
             <div className="space-y-4">
-              {(suggestedClauses || []).map((clause, index) => (
+              {(suggestedClauses || []).map((clause: SuggestedClause, index: number) => (
                 <SuggestedClauseItem
                   key={clause.id}
                   clause={clause}
@@ -444,26 +438,6 @@ export function NewContractContent({
           )}
         </div>
       </div>
-
-      {/* AnimatePresence para os comentários inline */}
-      <AnimatePresence>
-        {selectedIssue && (
-          isFirstIssue ? (
-            <InlineComment
-              change={selectedIssue}
-              onClose={onClose}
-              onNext={onNext}
-            />
-          ) : (
-            <RestrictedInlineComment
-              change={selectedIssue}
-              onClose={onClose}
-              onNext={onNext}
-              onUpgrade={onUpgrade}
-            />
-          )
-        )}
-      </AnimatePresence>
     </div>
   );
 }

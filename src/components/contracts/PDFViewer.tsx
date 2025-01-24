@@ -10,7 +10,7 @@ import {
   useHighlightContainerContext,
   usePdfHighlighterContext
 } from "react-pdf-highlighter-extended";
-import { ContractIssue } from "@/types/contract";
+import { Contract, ContractIssue } from "@/types/contract";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import * as pdfjs from 'pdfjs-dist';
@@ -33,7 +33,7 @@ interface PDFViewerProps {
 
 // Interface para nosso highlight customizado
 interface CustomHighlight extends Highlight {
-  type: string;
+  type: 'text'; // Definindo como literal type 'text' ao invés de string
   riskType: string;
   explanation: string;
 }

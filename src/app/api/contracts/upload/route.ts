@@ -6,8 +6,6 @@ import { authOptions } from '@/lib/auth';
 import crypto from 'crypto';
 import OpenAI from 'openai';
 import { 
-  IssueType, 
-  RiskType, 
   ContractIssue, 
   SuggestedClause,
   PDFPosition,
@@ -264,8 +262,8 @@ async function processContractInBackground(contractId: string, file: File, userI
     await prisma.contract.update({
       where: { id: contractId },
       data: {
-        issues: analysisResult.issues,
-        suggestedClauses: analysisResult.suggestedClauses,
+        issues: JSON.parse(JSON.stringify(analysisResult.issues)),
+        suggestedClauses: JSON.parse(JSON.stringify(analysisResult.suggestedClauses)),
         status: "under_review",
         metadata: {
           pageCount: numPages,

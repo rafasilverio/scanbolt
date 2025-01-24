@@ -184,8 +184,8 @@ export default function ContractPage() {
       <div className="flex-1 overflow-hidden">
         <NewContractContent
           contract={contract}
-          selectedHighlight={selectedHighlight}
-          onHighlightClick={onHighlightClick}
+          selectedIssue={selectedHighlight}
+          onIssueClick={onHighlightClick}
           isFirstIssue={contract?.status === 'under_review'}
           onUpgrade={handleGenerateRevision}
           onNext={onNextHighlight}

@@ -3811,7 +3811,279 @@ export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: 
       closeOnEsc={false}  // Impede fechamento com ESC
       closeOnOutsideClick={false}  // Impede fechamento ao clicar fora
     >
+      <DialogContent 
+        className="sm:max-w-xl bg-gradient-to-b from-indigo-950 to-indigo-900 text-white border-0"
+        onPointerDownOutside={(e) => e.preventDefault()} // Impede fechamento ao clicar fora
+        onEscapeKeyDown={(e) => e.preventDefault()} // Impede fechamento com ESC
+      >
+        {/* ... resto do conteúdo permanece igual ... */}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+Principais mudanças:
+
+1. Adicionado `modal={true}` para garantir comportamento modal
+2. Adicionado `closeOnEsc={false}` para impedir fechamento com ESC
+3. Adicionado `closeOnOutsideClick={false}` para impedir fechamento ao clicar fora
+4. Adicionados handlers `onPointerDownOutside` e `onEscapeKeyDown` para prevenir comportamentos padrão
+
+Agora o modal só poderá ser fechado através do botão "Cancel Analysis"!
+
+---
+
+_**User**_
+
+por favor me ajude a corrigir este erro para o deploy do vercel:
+
+./src/app/(protected)/contracts/[id]/page.tsx:187:11
+Type error: Type '{ contract: Contract; selectedHighlight: ContractIssue | null; onHighlightClick: (issue: ContractIssue) => void; isFirstIssue: boolean; onUpgrade: () => Promise<...>; onNext: () => void; onClose: () => void; }' is not assignable to type 'IntrinsicAttributes & NewContractContentProps'.
+  Property 'selectedHighlight' does not exist on type 'IntrinsicAttributes & NewContractContentProps'.
+  185 |         <NewContractContent
+  186 |           contract={contract}
+> 187 |           selectedHighlight={selectedHighlight}
+      |           ^
+  188 |           onHighlightClick={onHighlightClick}
+  189 |           isFirstIssue={contract?.status === 'under_review'}
+  190 |           onUpgrade={handleGenerateRevision}
+Error: Command "npm run build" exited with 1
+
+
+verifique se usamos mesmo o selectedHighligh e não perca nenhuma funcionalidade por favor
+
+---
+
+_**Assistant**_
+
+Vamos verificar o erro. O problema é que a prop `selectedHighlight` está sendo passada para `NewContractContent` mas não está definida nas props do componente. Vamos verificar se realmente precisamos dessa prop:
+
+```typescript:src/app/(protected)/contracts/[id]/page.tsx
+// ... imports ...
+
+export default function ContractPage() {
+  // ... outros estados ...
+  
+  const {
+    selectedHighlight,  // Este estado está sendo usado?
+    onHighlightClick,
+    onNextHighlight,
+    onCloseHighlight
+  } = useHighlights(contract?.issues || []);
+
+  // ... resto do código ...
+
+  return (
+    <div className="flex flex-col h-screen">
+      {/* ... header e outros elementos ... */}
       
+      <div className="flex-1 overflow-hidden">
+        <NewContractContent
+          contract={contract}
+          // Removendo selectedHighlight se não for necessário
+          onHighlightClick={onHighlightClick}
+          isFirstIssue={contract?.status === 'under_review'}
+          onUpgrade={handleGenerateRevision}
+          onNext={onNextHighlight}
+          onClose={onCloseHighlight}
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+Se você puder me mostrar o código do componente `NewContractContent` e do hook `useHighlights`, posso te ajudar a verificar se o `selectedHighlight` é realmente necessário e como melhor lidar com ele. 
+
+Por enquanto, existem duas opções:
+
+1. Se `selectedHighlight` é realmente necessário, precisamos adicionar à interface de props do `NewContractContent`:
+```typescript
+interface NewContractContentProps {
+  contract: Contract;
+  selectedHighlight: ContractIssue | null;
+  onHighlightClick: (issue: ContractIssue) => void;
+  isFirstIssue: boolean;
+  onUpgrade: () => Promise<void>;
+  onNext: () => void;
+  onClose: () => void;
+}
+```
+
+2. Se não for necessário, podemos simplesmente remover a prop como mostrado acima.
+
+Por favor, me mostre o código do `NewContractContent` e do `useHighlights` para que eu possa te dar uma solução mais precisa que mantenha todas as funcionalidades necessárias.
+
+---
+
+_**User**_
+
+aqui está o @NewContractContent.tsx 
+
+---
+
+_**Assistant**_
+
+Agora está claro! O problema é que no `ContractPage` estamos passando `selectedHighlight` mas o componente `NewContractContent` espera `selectedIssue`. Vamos ajustar o `ContractPage`:
+
+```typescript:src/app/(protected)/contracts/[id]/page.tsx
+// ... imports ...
+
+export default function ContractPage() {
+  // ... outros estados ...
+  
+  const {
+    selectedHighlight,
+    onHighlightClick,
+    onNextHighlight,
+    onCloseHighlight
+  } = useHighlights(contract?.issues || []);
+
+  // ... resto do código ...
+
+  return (
+    <div className="flex flex-col h-screen">
+      {/* ... header e outros elementos ... */}
+      
+      <div className="flex-1 overflow-hidden">
+        <NewContractContent
+          contract={contract}
+          selectedIssue={selectedHighlight}  // Mudado de selectedHighlight para selectedIssue
+          onIssueClick={onHighlightClick}   // Mudado de onHighlightClick para onIssueClick
+          isFirstIssue={contract?.status === 'under_review'}
+          onUpgrade={handleGenerateRevision}
+          onNext={onNextHighlight}
+          onClose={onCloseHighlight}
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Renomeado `selectedHighlight` para `selectedIssue` na prop
+2. Renomeado `onHighlightClick` para `onIssueClick` na prop
+3. Mantidas todas as funcionalidades, apenas ajustando os nomes para corresponder à interface do `NewContractContent`
+
+Isso deve resolver o erro de TypeScript mantendo toda a funcionalidade existente, já que é apenas uma questão de nomenclatura (highlights e issues são a mesma coisa no contexto do componente).
+
+---
+
+_**User**_
+
+Agora ao clicar na issue na lateral direita do @NewContractContent.tsx o seguinte erro ocorre:
+Unhandled Runtime Error
+TypeError: Cannot read properties of undefined (reading 'text')
+
+Source
+src/components/contracts/InlineComment.tsx (90:31) @ text
+
+  88 |             <span className="text-sm font-medium text-white/90">Selected Text:</span>
+  89 |             <div className="mt-2 p-3 bg-red-600/25 text-red-50 rounded-xl">
+> 90 |               {change.content.text}
+     |                               ^
+  91 |             </div>
+  92 |           </div>
+  93 |           <div>
+
+
+---
+
+_**Assistant**_
+
+O erro está ocorrendo porque o formato do objeto `change` passado para o `InlineComment` não está correto. Vamos verificar a estrutura esperada pelo `InlineComment` e ajustar o `NewContractContent`:
+
+```typescript:src/components/contracts/NewContractContent.tsx
+// ... imports ...
+
+interface NewContractContentProps {
+  contract?: Contract;
+  selectedIssue: ContractIssue | null;
+  onIssueClick: (issue: ContractIssue) => void;
+  isFirstIssue: boolean;
+  onUpgrade: () => void;
+  onNext: () => void;
+  onClose: () => void;
+}
+
+export function NewContractContent({
+  contract,
+  selectedIssue,
+  onIssueClick,
+  isFirstIssue,
+  onUpgrade,
+  onNext,
+  onClose
+}: NewContractContentProps) {
+  // ... outros estados ...
+
+  // Função para transformar o formato da issue para o formato esperado pelo InlineComment
+  const transformIssueToChange = (issue: ContractIssue) => {
+    return {
+      id: issue.id,
+      type: issue.type,
+      content: {
+        text: issue.originalText,
+        explanation: issue.explanation,
+        suggestion: issue.newText
+      },
+      position: issue.position,
+      status: issue.status || 'pending'
+    };
+  };
+
+  return (
+    <div className="flex h-full">
+      {/* ... resto do código ... */}
+
+      {/* AnimatePresence para os comentários inline */}
+      <AnimatePresence>
+        {selectedIssue && (
+          isFirstIssue ? (
+            <InlineComment
+              change={transformIssueToChange(selectedIssue)}
+              onClose={onClose}
+              onNext={onNext}
+            />
+          ) : (
+            <RestrictedInlineComment
+              change={transformIssueToChange(selectedIssue)}
+              onClose={onClose}
+              onNext={onNext}
+              onUpgrade={onUpgrade}
+            />
+          )
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Adicionada função `transformIssueToChange` para converter o formato da issue para o formato esperado pelo InlineComment
+2. A função transforma:
+   - `originalText` → `content.text`
+   - `explanation` → `content.explanation`
+   - `newText` → `content.suggestion`
+3. Mantém outros campos necessários como id, type, position e status
+4. Aplicada a transformação tanto para `InlineComment` quanto para `RestrictedInlineComment`
+
+Isso deve resolver o erro de undefined ao acessar `content.text` mantendo toda a funcionalidade existente.
+
+---
+
+_**User**_
+
+legal, o erro sumiu, porém vamos remover a função de abrir o tanto para InlineComment quanto para RestrictedInlineComment
+
+---
+
+_**Assistant**_
+
+
 
 ---
 

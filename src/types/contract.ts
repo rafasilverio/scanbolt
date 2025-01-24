@@ -1,5 +1,5 @@
 // Tipos base
-type IssueType = 'critical' | 'warning' | 'improvement';
+export type IssueType = 'critical' | 'warning' | 'improvement';
 type IssueStatus = 'pending' | 'accepted' | 'skipped';
 type RiskType = 'financial' | 'legal' | 'compliance' | 'operational';
 
