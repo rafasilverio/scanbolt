@@ -42,29 +42,19 @@ export default function ContractPage() {
 
         const transformedContract: Contract = {
           id: data.id,
-          title: data.title,
+          userId: data.userId,
           content: data.content,
           fileUrl: data.fileUrl,
           fileType: data.fileType,
-          highlights: typeof data.highlights === 'string' 
-            ? JSON.parse(data.highlights) 
-            : data.highlights || [],
-          changes: typeof data.changes === 'string' 
-            ? JSON.parse(data.changes) 
-            : data.changes || [],
           issues: typeof data.issues === 'string'
             ? JSON.parse(data.issues)
             : data.issues || [],
           suggestedClauses: typeof data.suggestedClauses === 'string'
             ? JSON.parse(data.suggestedClauses)
             : data.suggestedClauses || [],
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt,
           status: data.status,
-          numPages: data.numPages || 1,
-          fileName: data.fileName,
-          metadata: data.metadata || { pageCount: 1 },
-          pdfPositions: data.pdfPositions || null
+          metadata: data.metadata || { pageCount: data.numPages || 1, createdAt: new Date(), updatedAt: new Date() },
+          fileName: data.fileName
         };
 
         setContract(transformedContract);
