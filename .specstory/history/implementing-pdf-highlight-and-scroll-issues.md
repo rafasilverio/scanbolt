@@ -4392,6 +4392,269 @@ ajude-me a corrigir para o novo formato do @contract.ts
 
 ---
 
+_**Assistant**_
+
+
+
+Vamos ajustar a função `recalculateIndices` para trabalhar com os novos tipos do `contract.ts`:
+
+```typescript:src/app/api/contracts/[id]/revision/route.ts
+// ... imports ...
+
+// Atualizada para trabalhar com ContractIssue e SuggestedClause
+function recalculatePositions(
+  issues: ContractIssue[], 
+  oldContent: string, 
+  newContent: string
+): ContractIssue[] {
+  // Create a mapping of old positions to new positions
+  const diffMapping = new Map<number, number>();
+  let oldPos = 0;
+  let newPos = 0;
+
+  while (oldPos < oldContent.length && newPos < newContent.length) {
+    diffMapping.set(oldPos, newPos);
+    
+    if (oldContent[oldPos] === newContent[newPos]) {
+      oldPos++;
+      newPos++;
+    } else {
+      const nextMatchOld = oldContent.indexOf(newContent[newPos], oldPos);
+      const nextMatchNew = newContent.indexOf(oldContent[oldPos], newPos);
+      
+      if (nextMatchOld >= 0 && (nextMatchNew < 0 || nextMatchOld < nextMatchNew)) {
+        oldPos = nextMatchOld;
+      } else if (nextMatchNew >= 0) {
+        newPos = nextMatchNew;
+      } else {
+        oldPos++;
+        newPos++;
+      }
+    }
+  }
+
+  // Adjust positions for each issue
+  return issues.map(issue => {
+    if (!issue.position) return issue;
+
+    const newStartIndex = diffMapping.get(issue.position.startIndex) ?? 0;
+    const newEndIndex = diffMapping.get(issue.position.endIndex) ?? newContent.length;
+    
+    return {
+      ...issue,
+      position: {
+        ...issue.position,
+        startIndex: newStartIndex,
+        endIndex: newEndIndex
+      }
+    };
+  });
+}
+
+export async function POST(
+  req: Request,
+  { params }: { params: { id: string } }
+): Promise<Response> {
+  try {
+    // ... código existente ...
+
+    // Parse existing arrays com os novos tipos
+    const existingIssues: ContractIssue[] = JSON.parse(existingContract.issues || '[]');
+    const existingClauses: SuggestedClause[] = JSON.parse(existingContract.suggestedClauses || '[]');
+
+    const { originalContent, changes, issues } = await req.json();
+
+    // ... código do processamento do conteúdo ...
+
+    // Recalcular posições para os issues existentes
+    const adjustedExistingIssues = recalculatePositions(
+      existingIssues,
+      originalContent,
+      aiResponse.finalContent
+    );
+
+    // Não precisamos recalcular índices para SuggestedClauses pois elas usam referências textuais
+    // ao invés de índices numéricos
+
+    const newIssues = [
+      ...adjustedExistingIssues,
+      ...(aiResponse.issues || []).map((issue: any) => ({
+        id: uuidv4(),
+        type: issue.type,
+        originalText: issue.originalText,
+        newText: issue.newText,
+        explanation: issue.explanation,
+        riskType: issue.riskType || 'legal', // default to legal if not specified
+        status: 'pending',
+        position: {
+          startIndex: issue.startIndex,
+          endIndex: issue.endIndex,
+          pageNumber: issue.pageNumber || 1,
+          x1: issue.x1 || 0,
+          y1: issue.y1 || 0,
+          x2: issue.x2 || 0,
+          y2: issue.y2 || 0,
+          width: issue.width || 0,
+          height: issue.height || 0
+        }
+      }))
+    ];
+
+    const newClauses = [
+      ...existingClauses,
+      ...(aiResponse.suggestedClauses || []).map((clause: any) => ({
+        id: uuidv4(),
+        title: clause.title,
+        explanation: clause.explanation,
+        suggestedText: clause.content, // renamed from content to suggestedText
+        riskType: clause.riskType || 'legal',
+        status: 'pending',
+        suggestedPosition: {
+          afterClause: clause.afterClause,
+          pageNumber: clause.pageNumber
+        }
+      }))
+    ];
+
+    // ... resto do código ...
+
+  } catch (error) {
+    // ... código de tratamento de erro ...
+  }
+}
+```
+
+Principais mudanças:
+
+1. Renomeada a função para `recalculatePositions` para melhor refletir seu propósito
+2. Atualizada para trabalhar com a nova estrutura de `position` do `ContractIssue`
+3. Removida a recalculação de índices para `SuggestedClause` já que agora usa referências textuais
+4. Atualizado o mapeamento dos dados da AI para incluir todos os campos necessários dos novos tipos
+5. Adicionados valores default para campos obrigatórios que podem não vir da AI
+6. Ajustado o nome dos campos para corresponder aos novos tipos (ex: `content` → `suggestedText`)
+7. Adicionado `riskType` aos novos items
+
+Isso deve alinhar completamente a rota com as novas definições de tipos do `contract.ts`.
+
+---
+
+_**User**_
+
+ajude-me a corrigir o zoom em vermelho no editor
+
+---
+
+_**Assistant**_
+
+
+
+Vamos ajustar o PDFViewer para incluir a funcionalidade de zoom corretamente. Primeiro, vamos atualizar a interface de props e depois implementar os controles de zoom:
+
+```typescript:src/components/contracts/PDFViewer.tsx
+import { useState } from 'react';
+import { Contract, ContractIssue } from "@/types/contract";
+import { ZoomIn, ZoomOut } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+
+interface PDFViewerProps {
+  url: string;
+  selectedIssue: ContractIssue | null;
+  onIssueClick: (issue: ContractIssue) => void;
+  contractInfo?: Contract;
+  onFilterByType: (type: string | null) => void;
+  isFirstIssue: boolean;
+  onUpgrade: () => void;
+  onNext: () => void;
+  onClose: () => void;
+}
+
+export function PDFViewer({
+  url,
+  selectedIssue,
+  onIssueClick,
+  contractInfo,
+  onFilterByType,
+  isFirstIssue,
+  onUpgrade,
+  onNext,
+  onClose
+}: PDFViewerProps) {
+  const [zoom, setZoom] = useState(100);
+
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev + 25, 200)); // Máximo de 200%
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev - 25, 50)); // Mínimo de 50%
+  };
+
+  return (
+    <div className="relative h-full">
+      {/* Controles de Zoom */}
+      <div className="absolute top-4 right-4 flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-lg z-10">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleZoomOut}
+          disabled={zoom <= 50}
+          className="hover:bg-gray-100"
+        >
+          <ZoomOut className="w-4 h-4" />
+        </Button>
+        <span className="text-sm font-medium min-w-[3rem] text-center">
+          {zoom}%
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleZoomIn}
+          disabled={zoom >= 200}
+          className="hover:bg-gray-100"
+        >
+          <ZoomIn className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* PDF Container */}
+      <div 
+        className="h-full overflow-auto"
+        style={{
+          transform: `scale(${zoom / 100})`,
+          transformOrigin: 'top left',
+          transition: 'transform 0.2s ease-in-out'
+        }}
+      >
+        {/* Seu conteúdo PDF existente */}
+        <iframe
+          src={url}
+          className="w-full h-full border-0"
+          style={{
+            width: `${10000 / zoom * 100}%`, // Ajusta a largura baseado no zoom
+            height: `${10000 / zoom * 100}%`  // Ajusta a altura baseado no zoom
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+E no `NewContractContent`, podemos remover o estado de zoom já que ele agora está encapsulado no PDFViewer:
+
+```typescript:src/components/contracts/NewContractContent.tsx
+export function NewContractContent({
+  contract,
+  selectedIssue,
+  onIssueClick,
+  isFirstIssue,
+  onUpgrade,
+  onNext,
+  onClose
+}: NewContract
+
+---
+
 
 
 ---

@@ -57,7 +57,7 @@ interface PDFExtractResult {
 
 async function extractTextFromPDF(buffer: ArrayBuffer): Promise<PDFExtractResult> {
   return new Promise((resolve, reject) => {
-    const pdfParser = new PDFParser(null, 1);
+    const pdfParser = new PDFParser(null, false);
 
     pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
       try {
