@@ -1,5 +1,5 @@
 import { AlertTriangle, AlertCircle, Lightbulb, ArrowRight, Play } from 'lucide-react';
-import { Contract } from '@/types/contract';
+import { Contract, ContractIssue, IssueType } from '@/types/contract';
 import { Button } from '@/components/ui/button';
 
 interface ReviewSummaryProps {
@@ -9,9 +9,9 @@ interface ReviewSummaryProps {
 }
 
 export function ReviewSummary({ contract, onStartReview, showReview }: ReviewSummaryProps) {
-  const criticalCount = contract.highlights.filter(h => h.type === 'critical').length;
-  const warningCount = contract.highlights.filter(h => h.type === 'warning').length;
-  const improvementCount = contract.highlights.filter(h => h.type === 'improvement').length;
+  const criticalCount = contract.issues?.filter(i => i.type === 'critical').length || 0;
+  const warningCount = contract.issues?.filter(i => i.type === 'warning').length || 0;
+  const improvementCount = contract.issues?.filter(i => i.type === 'improvement').length || 0;
 
   const getMessageContent = () => {
     if (criticalCount > 0) {

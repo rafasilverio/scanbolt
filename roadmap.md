@@ -2,7 +2,7 @@
 
 **Application Name**: Scancontract
 
-**General Description**: This application is a SaaS (Software as a Service) platform for contract analysis and validation powered by Artificial Intelligence. Inspired by tools like Grammarly and Docusign, it helps users automatically review contracts, providing improvement suggestions and changes, and share with parts. The goal is to offer an easy-to-use platform that enables users to understand, make adjusts with AI, and better protect their contractual interests.
+**General Description**: This application is a SaaS (Software as a Service) platform for contract analysis and validation powered by Artificial Intelligence. Inspired by tools like Grammarly and Docusign, it helps users automatically review contracts, providing improvement suggestions and changes, and share with parts. The goal is to offer an easy-to-use platform that enables users to understand, make adjusts with AI changes automatically, and better protect their contractual interests.
 
 ### Brand Colors
 

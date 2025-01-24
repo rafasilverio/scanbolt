@@ -13,7 +13,7 @@ interface DocumentWrapperProps {
 
 export function DocumentWrapper({ children, className, contract }: DocumentWrapperProps) {
   return (
-    <div className="relative w-full max-w-4xl mx-auto">
+    <div className="relative w-full max-w-7xl mx-auto">
       {/* Paper shadow effect */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-y-2 right-2 left-1 bg-black/5 rounded-lg" />
@@ -40,7 +40,7 @@ export function DocumentWrapper({ children, className, contract }: DocumentWrapp
         className={cn(
           "bg-white shadow-lg rounded-b-lg",
           "min-h-[1056px] w-full",
-          "p-16 relative",
+          "p-4 relative",
           className
         )}
       >

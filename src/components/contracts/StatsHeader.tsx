@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { Contract, Highlight, HighlightType, AIChange } from '@/types/contract';
+import { Contract, ContractIssue, IssueType, SuggestedClause } from '@/types/contract';
 import { useMemo } from 'react';
 
 import {
@@ -30,52 +30,44 @@ import { Separator } from "@/components/ui/separator";
 interface StatsHeaderProps {
   contract: {
     status?: string;
-    highlights?: Highlight[] | string;
-    changes?: AIChange[] | string;
+    issues?: ContractIssue[] | string;
+    suggestedClauses?: SuggestedClause[] | string;
     title?: string;
     createdAt?: string;
     fileType?: string;
     pageCount?: number;
   } | null;
-  onIssueClick: (type: HighlightType) => void;
-  selectedIssueType: HighlightType | null;
+  onIssueClick: (type: IssueType) => void;
+  selectedIssueType: IssueType | null;
 }
 
 export default function StatsHeader({ contract, onIssueClick, selectedIssueType }: StatsHeaderProps) {
-  // Parse highlights if they're stored as a string
-  const highlights = (() => {
+  // Parse issues if they're stored as a string
+  const issues = useMemo(() => {
     try {
-      if (!contract?.highlights) return [];
+      if (!contract?.issues) return [];
       
       // If it's already an array, use it directly
-      if (Array.isArray(contract.highlights)) {
-        return contract.highlights;
+      if (Array.isArray(contract.issues)) {
+        return contract.issues;
       }
       
       // If it's a string, try to parse it
-      if (typeof contract.highlights === 'string') {
-        return JSON.parse(contract.highlights);
+      if (typeof contract.issues === 'string') {
+        return JSON.parse(contract.issues);
       }
       
       return [];
     } catch (e) {
-      console.error('Error parsing highlights:', e);
+      console.error('Error parsing issues:', e);
       return [];
     }
-  })();
+  }, [contract?.issues]);
 
-  // Count all types of highlights using lowercase comparison
-  const warningCount = highlights.filter((h: Highlight) => 
-    h.type?.toLowerCase() === 'warning'
-  ).length;
-
-  const dangerCount = highlights.filter((h: Highlight) => 
-    h.type?.toLowerCase() === 'critical'
-  ).length;
-
-  const improvementCount = highlights.filter((h: Highlight) => 
-    h.type?.toLowerCase() === 'improvement'
-  ).length;
+  // Count all types of issues
+  const warningCount = issues.filter(i => i.type === 'warning').length;
+  const criticalCount = issues.filter(i => i.type === 'critical').length;
+  const improvementCount = issues.filter(i => i.type === 'improvement').length;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -90,34 +82,31 @@ export default function StatsHeader({ contract, onIssueClick, selectedIssueType 
     }
   };
 
-  const getIssueButtonStyle = (type: string, count: number) => {
+  const getIssueButtonStyle = (type: IssueType, count: number) => {
     const isSelected = selectedIssueType === type;
     const baseStyle = 'border transition-colors font-medium';
     
     switch (type) {
       case 'warning':
-        return `${baseStyle} ${
-          isSelected 
-            ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300 hover:text-yellow-900' 
-            : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:text-yellow-800'
-        } ${count === 0 ? 'opacity-50' : ''}`;
+        return cn(baseStyle, {
+          'bg-yellow-200 text-yellow-800 hover:bg-yellow-300 hover:text-yellow-900': isSelected,
+          'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:text-yellow-800': !isSelected,
+          'opacity-50': count === 0
+        });
       
       case 'critical':
-        return `${baseStyle} ${
-          isSelected 
-            ? 'bg-red-200 text-red-800 hover:bg-red-300 hover:text-red-900' 
-            : 'bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800'
-        } ${count === 0 ? 'opacity-50' : ''}`;
+        return cn(baseStyle, {
+          'bg-red-200 text-red-800 hover:bg-red-300 hover:text-red-900': isSelected,
+          'bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800': !isSelected,
+          'opacity-50': count === 0
+        });
       
       case 'improvement':
-        return `${baseStyle} ${
-          isSelected 
-            ? 'bg-green-200 text-green-800 hover:bg-green-300 hover:text-green-900' 
-            : 'bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800'
-        } ${count === 0 ? 'opacity-50' : ''}`;
-      
-      default:
-        return `${baseStyle} bg-gray-50 text-gray-700 hover:bg-gray-100 hover:text-gray-800`;
+        return cn(baseStyle, {
+          'bg-green-200 text-green-800 hover:bg-green-300 hover:text-green-900': isSelected,
+          'bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800': !isSelected,
+          'opacity-50': count === 0
+        });
     }
   };
 
@@ -155,21 +144,21 @@ export default function StatsHeader({ contract, onIssueClick, selectedIssueType 
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onIssueClick('warning')}
-          className={`${getIssueButtonStyle('warning', warningCount)} border transition-colors w-full justify-start`}
+          onClick={() => onIssueClick('critical')}
+          className={`${getIssueButtonStyle('critical', criticalCount)} border transition-colors w-full justify-start`}
         >
-          <AlertTriangle className="w-4 h-4 mr-2" />
-          {warningCount} Warnings
+          <AlertCircle className="w-4 h-4 mr-2" />
+          {criticalCount} Critical Issues
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onIssueClick('critical')}
-          className={`${getIssueButtonStyle('critical', dangerCount)} border transition-colors w-full justify-start`}
+          onClick={() => onIssueClick('warning')}
+          className={`${getIssueButtonStyle('warning', warningCount)} border transition-colors w-full justify-start`}
         >
-          <AlertCircle className="w-4 h-4 mr-2" />
-          {dangerCount} Critical Issues
+          <AlertTriangle className="w-4 h-4 mr-2" />
+          {warningCount} Warnings
         </Button>
 
         <Button

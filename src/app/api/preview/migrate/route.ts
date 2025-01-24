@@ -57,6 +57,8 @@ export async function POST(req: Request) {
         status: "under_review",
         highlights: JSON.stringify(previewData.highlights || []),
         changes: JSON.stringify(previewData.changes || []),
+        pdfPositions: previewData.pdfPositions || [],
+        numPages: previewData.numPages || 1,
         user: {
           connect: {
             id: session.user.id
@@ -80,7 +82,10 @@ export async function POST(req: Request) {
       contract: {
         ...contract,
         highlights: JSON.parse(contract.highlights),
-        changes: JSON.parse(contract.changes)
+        changes: JSON.parse(contract.changes),
+        pdfPositions: Array.isArray(contract.pdfPositions) 
+          ? contract.pdfPositions 
+          : JSON.parse(contract.pdfPositions || '[]')
       }
     });
 

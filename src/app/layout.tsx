@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Providers } from '@/components/providers/Providers';
 import './globals.css';
+import '@/lib/pdfjs-worker';
 
 const inter = Inter({ subsets: ['latin'] });
 

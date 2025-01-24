@@ -24,55 +24,34 @@ model User {
   @@map("users")
 }
 
-model PreviewContract {
-  id         String             @id @default(cuid())
-  title      String
-  content    String
-  fileUrl    String
-  fileType   String
-  highlights PreviewHighlight[]
-  createdAt  DateTime           @default(now())
-}
-
-model PreviewHighlight {
-  id         String          @id @default(cuid())
-  type       String
-  message    String
-  startIndex Int
-  endIndex   Int
-  suggestion String?
-  contractId String
-  contract   PreviewContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-}
-
 model Contract {
-  id         String      @id @default(uuid()) @db.Uuid
+  id         String   @id @default(uuid()) @db.Uuid
   title      String
   content    String
   status     String
   fileUrl    String
   fileName   String
   fileType   String
-  userId     String      @db.Uuid
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  highlights String      @default("[]")
-  changes    String      @default("[]")
-  user       User        @relation(fields: [userId], references: [id])
-  Highlight  Highlight[]
+  userId     String   @db.Uuid
+  numPages     Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  highlights Json @default("[]")
+  changes Json @default("[]")
+  issues Json @default("[]") @db.JsonB    // Alterado de highlights
+  suggestedClauses Json @default("[]") @db.JsonB    // Alterado de changes
+  pdfPositions Json? @db.JsonB
+  metadata Json @default("{\"pageCount\": 1}") @db.JsonB // Novo campo
+  user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
 
-model Highlight {
-  id         String   @id @default(cuid())
-  type       String
-  message    String
-  startIndex Int
-  endIndex   Int
-  suggestion String?
-  contractId String
-  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+model preview_cache {
+  id         String    @id
+  data       Json
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  expires_at DateTime? @default(dbgenerated("(CURRENT_TIMESTAMP + '24 hours'::interval)")) @db.Timestamptz(6)
 }
 
 enum Role {

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import ContractViewer from "@/components/contracts/ContractViewer";
 import { useParams, useRouter } from 'next/navigation';
-import { Contract } from '@/types/contract';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
+import { Contract } from '@/types/contract';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ReviewSummary } from '@/components/contracts/ReviewSummary';
+import { useHighlights } from '@/lib/hooks/useHighlights';
+import { NewContractContent } from '@/components/contracts/NewContractContent';
 
 export default function ContractPage() {
   const params = useParams();
@@ -18,6 +19,16 @@ export default function ContractPage() {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  const [zoom, setZoom] = useState(100);
+
+  const {
+    highlights,
+    selectedHighlightId,
+    selectedHighlight,
+    onHighlightClick,
+    onNextHighlight,
+    onCloseHighlight
+  } = useHighlights(contract?.highlights || []);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -43,9 +54,19 @@ export default function ContractPage() {
           changes: typeof data.changes === 'string' 
             ? JSON.parse(data.changes) 
             : data.changes || [],
+          issues: typeof data.issues === 'string'
+            ? JSON.parse(data.issues)
+            : data.issues || [],
+          suggestedClauses: typeof data.suggestedClauses === 'string'
+            ? JSON.parse(data.suggestedClauses)
+            : data.suggestedClauses || [],
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
           status: data.status,
+          numPages: data.numPages || 1,
+          fileName: data.fileName,
+          metadata: data.metadata || { pageCount: 1 },
+          pdfPositions: data.pdfPositions || null
         };
 
         setContract(transformedContract);
@@ -121,7 +142,6 @@ export default function ContractPage() {
 
   const handleStartReview = () => {
     setShowReview(true);
-    // Aqui você pode adicionar mais lógica posteriormente
   };
 
   if (loading) {
@@ -148,31 +168,42 @@ export default function ContractPage() {
     return <div className="p-6">Contract not found</div>;
   }
 
-  console.log('Initial contract data:', contract);
-
   return (
-    <div className="h-full">
-      <div className="w-full bg-gradient-to-b from-[#5000f7] to-[#2563EB] px-6 py-8">
-        <div className="max-w-7xl mx-auto space-y-4">
-          <h1 className="text-white text-2xl font-semibold">
-            AI Contract Analysis Report
-          </h1>
-          <p className="text-blue-100 text-lg">
-            Our AI has analyzed your contract and identified potential risks and opportunities for improvement
-          </p>
-          <ReviewSummary 
-            contract={contract}
-            onStartReview={handleStartReview}
-            showReview={showReview}
-          />
+    <div className="flex flex-col h-screen">
+      <div className="flex-none w-full bg-gradient-to-b from-[#5000f7] to-[#2563EB] px-6 py-12 relative rounded-t-3xl">
+        <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-xl">
+            <h1 className="text-white text-3xl font-bold tracking-tight mb-4">
+              AI Contract Analysis Report
+            </h1>
+            <p className="text-blue-100 text-lg leading-relaxed">
+              Our AI has analyzed your contract and identified potential risks and opportunities for improvement
+            </p>
+          </div>
+          
+            <ReviewSummary 
+              contract={contract}
+              onStartReview={handleStartReview}
+              showReview={showReview}
+            />
         </div>
+        
+        {/* Decorative elements */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)] pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#2563EB]/50 to-transparent pointer-events-none"></div>
       </div>
       
-      <ContractViewer 
-        contract={contract} 
-        onGenerateRevision={handleGenerateRevision}
-        isGenerating={isGenerating}
-      />
+      <div className="flex-1 overflow-hidden">
+        <NewContractContent
+          contract={contract}
+          selectedHighlight={selectedHighlight}
+          onHighlightClick={onHighlightClick}
+          isFirstIssue={contract?.status === 'pending'}
+          onUpgrade={handleGenerateRevision}
+          onNext={onNextHighlight}
+          onClose={onCloseHighlight}
+        />
+      </div>
     </div>
   );
 }

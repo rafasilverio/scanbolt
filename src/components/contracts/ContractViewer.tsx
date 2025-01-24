@@ -24,9 +24,8 @@ import {
 import { Diff } from '@/components/contracts/Diff';
 import { AIChangeBadge } from '@/components/contracts/AIChangeBadge';
 import { motion, AnimatePresence } from 'framer-motion';
-import StatsHeader from '@/components/contracts/StatsHeader';
 import { DocumentWrapper } from "./DocumentWrapper";
-import { ContractContent } from "./ContractContent";
+import { NewContractContent } from "./NewContractContent";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { InlineComment } from "./InlineComment";
 import { RestrictedInlineComment } from "./RestrictedInlineComment";
@@ -51,7 +50,7 @@ export default function ContractViewer({
   const [selectedChange, setSelectedChange] = useState<AIChange | null>(null);
   const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
   const [selectedIssueType, setSelectedIssueType] = useState<HighlightType | null>(null);
-  const [zoom, setZoom] = useState(110);
+  const [zoom, setZoom] = useState(130);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isFirstIssue, setIsFirstIssue] = useState(true);
   
@@ -85,25 +84,16 @@ export default function ContractViewer({
   useEffect(() => {
     if (initialContract) {
       try {
-        // Processar highlights
+        // Processar highlights mantendo as posições existentes
         const processedHighlights = Array.isArray(initialContract.highlights)
           ? initialContract.highlights
           : typeof initialContract.highlights === 'string'
             ? JSON.parse(initialContract.highlights)
             : [];
 
-        // Processar changes
-        const processedChanges = Array.isArray(initialContract.changes)
-          ? initialContract.changes
-          : typeof initialContract.changes === 'string'
-            ? JSON.parse(initialContract.changes)
-            : [];
-
         const validHighlights = processedHighlights.map(h => ({
-          id: h.id,
-          type: h.type,
-          message: h.message,
-          suggestion: h.suggestion,
+          ...h,
+          position: h.position,
           startIndex: Number(h.startIndex || 0),
           endIndex: Number(h.endIndex || 10)
         }));
@@ -111,42 +101,24 @@ export default function ContractViewer({
         const parsedContract = {
           ...initialContract,
           highlights: validHighlights,
-          changes: processedChanges
+          changes: initialContract.changes
         };
 
         setContract(parsedContract);
 
-        console.log(validHighlights);
+        // Selecionar o primeiro highlight crítico automaticamente
+        const firstCriticalHighlight = validHighlights.find(h => h.type === 'critical');
+        if (firstCriticalHighlight) {
+          const firstChange = parsedContract.changes?.find(
+            c => c.startIndex === firstCriticalHighlight.startIndex && 
+                c.endIndex === firstCriticalHighlight.endIndex
+          );
 
-        // Selecionar primeira issue automaticamente
-        if (validHighlights.length > 0) {
-          // Ordenar highlights por criticidade
-          const sortedHighlights = [...validHighlights].sort((a, b) => {
-            const priority = { critical: 0, warning: 1, improvement: 2 };
-            return priority[a.type as keyof typeof priority] - priority[b.type as keyof typeof priority];
-          });
-
-          const firstHighlight = sortedHighlights[0];
-          const isFirstCritical = firstHighlight.type === 'critical';
-          
-          // Encontrar o change correspondente
-          const correspondingChange = processedChanges.find(
-            change => change.startIndex === firstHighlight.startIndex && 
-                      change.endIndex === firstHighlight.endIndex
-          ) || {
-            id: firstHighlight.id,
-            type: firstHighlight.type,
-            content: firstHighlight.suggestion || '',
-            originalContent: firstHighlight.message || '',
-            explanation: firstHighlight.message,
-            startIndex: firstHighlight.startIndex,
-            endIndex: firstHighlight.endIndex,
-            status: 'pending'
-          };
-
-          setSelectedHighlight(firstHighlight);
-          setSelectedChange(correspondingChange);
-          setIsFirstIssue(isFirstCritical);
+          if (firstChange) {
+            setIsFirstIssue(true);
+            setSelectedHighlight(firstCriticalHighlight);
+            setSelectedChange(firstChange);
+          }
         }
 
       } catch (error) {
@@ -326,81 +298,24 @@ export default function ContractViewer({
   };
 
   return (
-    <div className="h-full flex">
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
-        {/* <div className="flex items-center justify-end p-4 border-b">
-          <div className="flex-shrink-0">
-            {isGenerating ? (
-              <Button 
-                disabled
-                className="bg-[#BFDBFE] text-[#94A3B8] transition-colors"
-                size="default"
-              >
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating Revision...
-              </Button>
-            ) : showViewRevisionButton ? (
-              <Button 
-                onClick={handleViewRevision}
-                className="bg-[#2563EB] hover:bg-[#5000f7] text-white transition-colors"
-                size="default"
-              >
-                View Revised Contract
-              </Button>
-            ) : null}
-          </div> 
-        </div>*/}
-
-        <div className="flex-1 h-[calc(100vh-16rem)] overflow-hidden">
-          <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
-            <div 
-              className="container max-w-4xl mx-auto py-4"
-              style={{ 
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: 'top center',
-                transition: 'transform 0.2s ease-in-out'
-              }}
-            >
-              <DocumentWrapper contract={storeContract}>
-                <div className="relative">
-                  <ContractContent
-                    contract={storeContract}
-                    selectedHighlight={selectedHighlight}
-                    selectedChange={selectedChange}
-                    onChangeSelect={setSelectedChange}
-                    highlights={filteredHighlights}
-                    onHighlightClick={handleHighlightClick}
-                    isFirstIssue={isFirstIssue}
-                    onUpgrade={handleUpgrade}
-                    onNext={handleNext}
-                    onClose={handleClose}
-                  />
-                </div>
-              </DocumentWrapper>
-            </div>
-          </div>
-        </div>
-
-        <DocumentToolbar
-          zoom={zoom}
-          onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
-          onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
-          onZoomReset={() => setZoom(100)}
-        />
-      </div>
-
-      {/* Right Sidebar */}
-      <div className="w-80 border-l bg-white overflow-y-auto my-4">
-        <div className="p-4">
-          <StatsHeader 
-            contract={{
-              ...storeContract,
-              pageCount: getPageCount(storeContract?.content)
-            }}
-            onIssueClick={handleIssueClick}
-            selectedIssueType={selectedIssueType}
-          />
+    <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full">
+          <DocumentWrapper contract={storeContract}>
+            <NewContractContent
+              contract={storeContract}
+              selectedHighlight={selectedHighlight}
+              selectedChange={selectedChange}
+              onChangeSelect={setSelectedChange}
+              highlights={filteredHighlights}
+              onHighlightClick={handleHighlightClick}
+              isFirstIssue={isFirstIssue}
+              onUpgrade={handleUpgrade}
+              onNext={handleNext}
+              onClose={handleClose}
+              zoom={zoom}
+            />
+          </DocumentWrapper>
         </div>
       </div>
     </div>
