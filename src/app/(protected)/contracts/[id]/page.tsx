@@ -22,13 +22,11 @@ export default function ContractPage() {
   const [zoom, setZoom] = useState(100);
 
   const {
-    highlights,
-    selectedHighlightId,
     selectedHighlight,
     onHighlightClick,
     onNextHighlight,
     onCloseHighlight
-  } = useHighlights(contract?.highlights || []);
+  } = useHighlights(contract?.issues || []);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -93,7 +91,7 @@ export default function ContractPage() {
     
     setIsGenerating(true);
     try {
-      const acceptedChanges = contract.changes.filter(change => change.status === 'accepted');
+      const acceptedChanges = contract.issues.filter((issue) => issue.status === 'accepted');
       console.log('Accepted changes:', acceptedChanges);
 
       const response = await fetch(`/api/contracts/${contract.id}/revision`, {
@@ -104,7 +102,7 @@ export default function ContractPage() {
         body: JSON.stringify({
           originalContent: contract.content,
           changes: acceptedChanges,
-          highlights: contract.highlights
+          highlights: contract.issues
         }),
       });
 
@@ -198,7 +196,7 @@ export default function ContractPage() {
           contract={contract}
           selectedHighlight={selectedHighlight}
           onHighlightClick={onHighlightClick}
-          isFirstIssue={contract?.status === 'pending'}
+          isFirstIssue={contract?.status === 'under_review'}
           onUpgrade={handleGenerateRevision}
           onNext={onNextHighlight}
           onClose={onCloseHighlight}
