@@ -102,18 +102,18 @@ export async function GET(
       if (typeof contract.issues === 'string') {
         processedIssues = JSON.parse(contract.issues);
       } else if (contract.issues && typeof contract.issues === 'object') {
-        processedIssues = contract.issues;
+        processedIssues = Array.isArray(contract.issues) ? contract.issues : [];
       }
     } catch (e) {
       console.error('Error processing issues:', e);
     }
 
-    // Processar suggested clauses
+    // Processar suggested clauses  
     try {
       if (typeof contract.suggestedClauses === 'string') {
         processedClauses = JSON.parse(contract.suggestedClauses);
       } else if (contract.suggestedClauses && typeof contract.suggestedClauses === 'object') {
-        processedClauses = contract.suggestedClauses;
+        processedClauses = Array.isArray(contract.suggestedClauses) ? contract.suggestedClauses : [];
       }
     } catch (e) {
       console.error('Error processing suggested clauses:', e);
