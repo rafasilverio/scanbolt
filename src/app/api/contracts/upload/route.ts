@@ -14,8 +14,9 @@ import {
   Contract
 } from '@/types/contract';
 import PDFParser from 'pdf2json';
+import { analyzeContract } from '@/lib/ai';
 
-export const maxDuration = 60; // Set max duration to Vercel default
+export const maxDuration = 300; // Aumentado para 5 minutos
 export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({
@@ -155,109 +156,6 @@ function preprocessContractText(text: string): string {
     .trim();
 }
 
-async function analyzeContract(text: string, textCoordinates: Map<string, any>): Promise<{ 
-  issues: ContractIssue[], 
-  suggestedClauses: SuggestedClause[] 
-}> {
-  try {
-    // Converter o Map de coordenadas para um objeto para incluir no prompt
-    const textLines = Array.from(textCoordinates.entries()).map(([text, coords]) => ({
-      text,
-      coordinates: coords
-    }));
-
-    const analysisResponse = await openai.chat.completions.create({
-      max_tokens: 3000,
-      temperature: 0.1,
-      model: "gpt-4o",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert legal document analyzer specialized in contracts. Your task is to:
-
-1. Analyze the provided contract text for issues and improvements.
-2. Identify missing essential clauses.
-3. Provide comprehensive feedback in the following categories:
-   - Critical: Legal risks or serious issues
-   - Warning: Compliance concerns or potential risks
-   - Improvement: Suggestions for better clarity or protection
-
-Return a JSON with the following structure:
-{
-  "issues": [
-    {
-      "id": "uuid-string",
-      "type": "critical" | "warning" | "improvement",
-      "originalText": "EXACT text from the provided segments",
-      "newText": "Suggested replacement text",
-      "explanation": "Clear explanation of the issue",
-      "riskType": "legal" | "financial" | "compliance" | "operational",
-      "status": "pending",
-      "position": {
-        "startIndex": number,
-        "endIndex": number,
-        "pageNumber": number,
-        "x1": number,
-        "y1": number,
-        "x2": number,
-        "y2": number,
-        "width": number,
-        "height": number
-      }
-    }
-  ],
-  "suggestedClauses": [
-    {
-      "id": "uuid-string",
-      "title": "Clause title",
-      "explanation": "Why this clause is needed",
-      "suggestedText": "Complete text of suggested clause",
-      "riskType": "legal" | "financial" | "compliance" | "operational",
-      "status": "pending",
-      "suggestedPosition": {
-        "afterClause": "Text of clause to insert after",
-        "pageNumber": number
-      }
-    }
-  ]
-}`        },
-        {
-          role: "user",
-          content: `Analyze this contract text and use the provided text segments with coordinates:
-${JSON.stringify(textLines, null, 2)}`
-        }
-      ]
-    });
-
-    const analysis = JSON.parse(analysisResponse.choices[0]?.message?.content || '{"issues":[],"suggestedClauses":[]}');
-
-    // Processar issues mantendo as coordenadas originais
-    const processedIssues = analysis.issues.map((issue: ContractIssue) => {
-      const coordinates = textCoordinates.get(issue.originalText.trim());
-      console.log('Found coordinates for:', issue.originalText, coordinates);
-
-      return {
-        ...issue,
-        id: issue.id || crypto.randomUUID(),
-        status: 'pending' as const,
-        position: {
-          ...issue.position,
-          ...(coordinates || {}) // Usar coordenadas encontradas ou manter as do GPT
-        }
-      };
-    });
-
-    return {
-      issues: processedIssues,
-      suggestedClauses: analysis.suggestedClauses
-    };
-  } catch (error) {
-    console.error('Analysis error:', error);
-    return { issues: [], suggestedClauses: [] };
-  }
-}
-
 function sanitizeFileName(fileName: string): string {
   return fileName
     .normalize('NFD')
@@ -285,61 +183,108 @@ export async function POST(req: NextRequest) {
       throw new Error('No file provided');
     }
 
-    // Upload to Supabase Storage
+    // 1. Criar contrato inicial com status "analyzing"
+    const contract = await prisma.contract.create({
+      data: {
+        title: file.name,
+        fileUrl: '', // será atualizado após upload
+        fileName: file.name,
+        status: "analyzing",
+        fileType: file.type,
+        content: '',  // será atualizado após extração
+        issues: [],   // será atualizado após análise
+        suggestedClauses: [], // será atualizado após análise
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        userId: userId,
+        numPages: 0   // será atualizado após extração
+      }
+    });
+
+    // 2. Iniciar processamento em background
+    processContractInBackground(contract.id, file, userId);
+
+    // 3. Retornar resposta imediata
+    return NextResponse.json({
+      success: true,
+      contract: {
+        id: contract.id,
+        status: "analyzing"
+      }
+    });
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to process contract' 
+    }, { status: 500 });
+  }
+}
+
+async function processContractInBackground(contractId: string, file: File, userId: string) {
+  try {
+    // 1. Upload do arquivo para o Supabase
     const sanitizedFileName = sanitizeFileName(file.name);
     const uniqueFileName = `${Date.now()}-${sanitizedFileName}`;
     const buffer = await file.arrayBuffer();
 
-    const { data, error } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('contracts')
       .upload(uniqueFileName, buffer, {
         contentType: file.type,
         upsert: false
       });
 
-    if (error) {
-      throw error;
-    }
+    if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = supabase.storage
       .from('contracts')
-      .getPublicUrl(data.path);
+      .getPublicUrl(uploadData.path);
 
-    // Extract text and analyze
+    // 2. Extrair texto e coordenadas
     const { text, numPages, textCoordinates } = await extractTextContent(file);
-    const analysisResult = await analyzeContract(text, textCoordinates);
 
-    // Criar contrato com dados processados
-    const contract = await prisma.contract.create({
+    // 3. Primeira atualização: URL do arquivo e conteúdo
+    await prisma.contract.update({
+      where: { id: contractId },
       data: {
-        title: file.name,
         fileUrl: publicUrl,
-        fileName: file.name,
-        status: "under_review",
-        fileType: file.type,
         content: text,
-        issues: analysisResult.issues,
-        suggestedClauses: analysisResult.suggestedClauses,
-        metadata: {
-          pageCount: numPages,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        userId: userId,
         numPages: numPages
       }
     });
 
-    return NextResponse.json({
-      success: true,
-      contract
+    // 4. Análise do contrato
+    const analysisResult = await analyzeContract(text, textCoordinates);
+
+    // 5. Atualização final com resultados
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        issues: analysisResult.issues,
+        suggestedClauses: analysisResult.suggestedClauses,
+        status: "under_review",
+        metadata: {
+          pageCount: numPages,
+          updatedAt: new Date()
+        }
+      }
     });
 
   } catch (error) {
-    console.error('Upload error details:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Error processing contract' 
-    }, { status: 500 });
+    console.error('Background processing error:', error);
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        status: "error",
+        metadata: {
+          error: 'Failed to process contract',
+          updatedAt: new Date()
+        }
+      }
+    });
   }
 }

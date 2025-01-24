@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Shield, Zap, Brain, Share2, CheckCircle, Star } from "lucide-react";
+import { ArrowRight, Shield, Zap, Brain, Share2, CheckCircle, Star, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContractUploader } from "@/components/contracts/upload/ContractUploader";
 import { useSession } from "next-auth/react";
@@ -49,6 +49,45 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-secondary to-primary text-white">
+      {/* Navbar for logged users */}
+      {session?.user && (
+        <nav className="bg-white/10 backdrop-blur-sm border-b border-white/10">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="flex items-center justify-between h-16">
+              <Link href="/" className="font-bold text-xl">
+                Scancontract
+              </Link>
+              
+              <div className="flex items-center gap-6">
+                <Link 
+                  href="/contracts" 
+                  className="text-sm text-white/80 hover:text-white transition-colors"
+                >
+                  My Contracts
+                </Link>
+                <Link 
+                  href="/dashboard" 
+                  className="text-sm text-white/80 hover:text-white transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <div className="flex items-center gap-2 ml-4">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10">
+                    <User className="w-4 h-4" />
+                    <span className="text-sm">{session.user.email}</span>
+                  </div>
+                  <Link href="/api/auth/signout">
+                    <Button variant="ghost" size="sm" className="text-white/80 hover:text-white">
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+      )}
+
       {/* Hero Section with Uploader */}
       <section className="max-w-6xl mx-auto px-4 pt-20 pb-12">
         <div className="text-center mb-12">

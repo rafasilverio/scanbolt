@@ -11,7 +11,6 @@ interface ProcessingModalProps {
 }
 
 export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: ProcessingModalProps) {
-  const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   
   const steps = [
@@ -19,60 +18,52 @@ export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: 
     "Identifying key clauses",
     "Analyzing terms",
     "Checking for risks",
-    "Generating insights"
+    "Generating Corrections and New Clauses"
   ];
 
-  // Reset progress when modal opens
+  // Reset step when modal opens
   useEffect(() => {
     if (isOpen) {
-      setProgress(0);
       setCurrentStep(0);
     }
   }, [isOpen]);
 
-  // Handle upload progress (0-50%)
-  useEffect(() => {
-    if (isOpen && uploadProgress <= 100) {
-      setProgress(uploadProgress / 2); // First 50% is upload
-    }
-  }, [uploadProgress, isOpen]);
-
-  // Handle processing progress (50-100%)
-  useEffect(() => {
-    let progressTimer: NodeJS.Timeout;
-
-    if (isOpen && uploadProgress === 100) {
-      progressTimer = setInterval(() => {
-        setProgress(old => {
-          if (old >= 100) {
-            clearInterval(progressTimer);
-            return 100;
-          }
-          // Slower increment for processing phase
-          return old + 0.5;
-        });
-      }, 100); // Slower interval
-    }
-
-    return () => clearInterval(progressTimer);
-  }, [uploadProgress, isOpen]);
-
   // Update steps based on progress
   useEffect(() => {
-    const stepIndex = Math.floor((progress / 100) * steps.length);
-    setCurrentStep(Math.min(stepIndex, steps.length - 1));
-  }, [progress]);
+    // Mapear o progresso para os passos
+    if (uploadProgress <= 10) {
+      setCurrentStep(0); // Scanning document
+    } else if (uploadProgress <= 30) {
+      setCurrentStep(1); // Identifying key clauses
+    } else if (uploadProgress <= 50) {
+      setCurrentStep(2); // Analyzing terms
+    } else if (uploadProgress <= 70) {
+      setCurrentStep(3); // Checking for risks
+    } else {
+      setCurrentStep(4); // Generating Corrections
+    }
+  }, [uploadProgress]);
 
   // Calculate time remaining
   const getTimeRemaining = () => {
     const totalTime = 30; // Total expected seconds
-    const remainingTime = Math.ceil((totalTime * (100 - progress)) / 100);
+    const remainingTime = Math.ceil((totalTime * (100 - uploadProgress)) / 100);
     return Math.max(remainingTime, 0);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => onCancel()}>
-      <DialogContent className="sm:max-w-xl bg-gradient-to-b from-indigo-950 to-indigo-900 text-white border-0">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={() => onCancel()}
+      modal={true}
+      closeOnEsc={false}
+      closeOnOutsideClick={false}
+    >
+      <DialogContent 
+        className="sm:max-w-xl bg-gradient-to-b from-indigo-950 to-indigo-900 text-white border-0"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <div className="p-6">
           {/* Header */}
           <div className="text-center mb-8">
@@ -87,7 +78,7 @@ export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: 
           <div className="relative w-full h-2 bg-white/10 rounded-full mb-8 overflow-hidden">
             <div 
               className="absolute left-0 top-0 h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${uploadProgress}%` }}
             />
           </div>
 
@@ -116,7 +107,7 @@ export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: 
           <div className="mt-8 pt-6 border-t border-white/10">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-blue-400">{Math.round(progress)}%</div>
+                <div className="text-2xl font-bold text-blue-400">{Math.round(uploadProgress)}%</div>
                 <div className="text-sm text-white/60">Complete</div>
               </div>
               <div>

@@ -1,58 +1,135 @@
 "use client";
 
-import { UploadZone } from "./UploadZone";
-import { Link } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Progress } from "@/components/ui/progress";
 
 export function ContractUploader() {
-  return (
-    <div className="border-2 border-dashed border-[#BFDBFE]/30 rounded-xl p-12 bg-[#2563EB]/10 max-w-4xl mx-auto">
-      <div className="flex flex-col items-center gap-4">
-        <UploadZone 
-          accept={{
-            'application/pdf': ['.pdf'],
-            'text/plain': ['.txt']
-          }}
-          maxSize={10 * 1024 * 1024} // 10MB limit
-        />
-        
-        {/* Import buttons */}
-        <div className="flex gap-4 mt-4">
-          <Button 
-            variant="outline" 
-            className="gap-2 bg-[#2563EB]/20 border-[#BFDBFE]/30 text-white hover:bg-[#2563EB]/30"
-          >
-            <Link className="w-4 h-4" />
-            Import from Google Docs
-          </Button>
-          <Button 
-            variant="outline" 
-            className="gap-2 bg-[#2563EB]/20 border-[#BFDBFE]/30 text-white hover:bg-[#2563EB]/30"
-          >
-            <Link className="w-4 h-4" />
-            Import from Office 365
-          </Button>
-        </div>
-      </div>
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string>('Uploading file...');
+  const router = useRouter();
 
-      {/* Features indicators */}
-      <div className="flex items-center justify-center gap-8 mt-6 text-sm text-[#BFDBFE]">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-[#22C55E] rounded-full" />
-          <span>Secure Upload</span>
+  const uploadContract = async (file: File) => {
+    setUploading(true);
+    setError(null);
+    setProgress('Uploading file...');
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/contracts/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.contract?.id) {
+        await waitForAnalysis(data.contract.id);
+      } else {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setError('Failed to upload contract');
+      setUploading(false);
+    }
+  };
+
+  const waitForAnalysis = async (contractId: string) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 2 minutos máximo (com 2s de intervalo)
+    
+    const checkStatus = async (): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/contracts/${contractId}/status`);
+        const data = await response.json();
+        
+        if (data.status === 'under_review' && 
+            Array.isArray(data.issues) && 
+            data.issues.length > 0) {
+          setProgress('Analysis complete!');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          router.push(`/contracts/${contractId}`);
+          return true;
+        }
+        
+        switch (data.status) {
+          case 'analyzing':
+            setProgress('Analyzing contract...');
+            return false;
+          case 'error':
+            throw new Error('Contract analysis failed');
+          default:
+            return false;
+        }
+      } catch (error) {
+        console.error('Status check error:', error);
+        setError('Failed to process contract');
+        setUploading(false);
+        return true;
+      }
+    };
+
+    while (attempts < maxAttempts) {
+      const isDone = await checkStatus();
+      if (isDone) break;
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      setError('Analysis timeout. Please try again.');
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await uploadContract(file);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-white/5">
+        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+          <Upload className="w-8 h-8 mb-3" />
+          <p className="mb-2 text-sm">
+            <span className="font-semibold">Click to upload</span> or drag and drop
+          </p>
+          <p className="text-xs text-gray-400">PDF (MAX. 10MB)</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-[#22C55E] rounded-full" />
-          <span>PDF & TXT Support</span>
+        <input
+          type="file"
+          className="hidden"
+          accept=".pdf"
+          onChange={handleFileChange}
+          disabled={uploading}
+        />
+      </label>
+      
+      {uploading && (
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span>{progress}</span>
+          </div>
+          <Progress value={100} className="animate-pulse" />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-[#22C55E] rounded-full" />
-          <span>Instant Analysis</span>
+      )}
+      
+      {error && (
+        <div className="mt-4 text-center text-red-500">
+          <p>{error}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span>No signup required</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

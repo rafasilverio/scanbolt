@@ -88,13 +88,21 @@ export function UploadZone() {
   const handleUpload = async (file: File) => {
     try {
       setLoading(true);
-      setProgress(0);
       setShowProcessing(true);
       
-      // Simulate upload progress
+      // Começar do 0 apenas se não houver progresso anterior
+      if (progress === 0) {
+        setProgress(0);
+      }
+      
+      // Upload progress mais gradual (0-30%)
+      let uploadProgress = 0;
       const uploadTimer = setInterval(() => {
-        setProgress(prev => Math.min(prev + 5, 90));
-      }, 200);
+        if (uploadProgress < 30) {
+          uploadProgress += 0.5;
+          setProgress(prev => Math.max(prev, uploadProgress));
+        }
+      }, 100);
 
       const formData = new FormData();
       formData.append('file', file);
@@ -106,30 +114,93 @@ export function UploadZone() {
         throw new Error(data.error || 'Invalid response from server');
       }
 
-      setProgress(100);
-
       // Novo fluxo: Se não estiver autenticado, redireciona para preview
       if (!session) {
-        setTimeout(() => {
-          toast.success('Contract analyzed! Register to see the results.');
-          router.push(`/preview/${data.tempId}`);
-        }, 30000);
+        setProgress(100);
+        toast.success('Contract analyzed! Register to see the results.');
+        router.push(`/preview/${data.tempId}`);
         return;
       }
 
-      // Fluxo existente para usuários autenticados
-      setTimeout(() => {
-        if (data.success && data.contract) {
-          toast.success('Contract uploaded successfully!');
-          router.push(`/contracts/${data.contract.id}`);
-        }
-      }, 30000);
+      // Garantir que estamos em pelo menos 35% antes de começar a análise
+      setProgress(prev => Math.max(prev, 35));
+      
+      // Fluxo para usuários autenticados: aguardar análise completa
+      await waitForAnalysis(data.contract.id);
 
     } catch (error) {
       console.error('Upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       setError(errorMessage);
       toast.error(errorMessage);
+      setShowProcessing(false);
+      setLoading(false);
+    }
+  };
+
+  const waitForAnalysis = async (contractId: string) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 2 minutos máximo (com 1s de intervalo)
+    
+    const checkStatus = async (): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/contracts/${contractId}/status`);
+        const data = await response.json();
+        
+        if (data.status === 'under_review' && 
+            Array.isArray(data.issues) && 
+            data.issues.length > 0) {
+          
+          // Progresso final mais suave e gradual
+          const finalProgress = Math.max(progress, 90);
+          for (let p = finalProgress; p <= 100; p += 0.5) {
+            setProgress(p);
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          
+          toast.success('Contract analyzed successfully!');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          router.push(`/contracts/${contractId}`);
+          return true;
+        }
+        
+        switch (data.status) {
+          case 'analyzing':
+            // Progresso mais gradual durante a análise (35-90%)
+            const currentProgress = progress;
+            const targetProgress = Math.min(90, 35 + (attempts * 1)); // Aumenta 1% por tentativa
+            
+            // Garantir que o progresso nunca diminua
+            if (targetProgress > currentProgress) {
+              setProgress(targetProgress);
+            }
+            return false;
+            
+          case 'error':
+            throw new Error('Contract analysis failed');
+          default:
+            return false;
+        }
+      } catch (error) {
+        console.error('Status check error:', error);
+        setError('Failed to process contract');
+        setLoading(false);
+        setShowProcessing(false);
+        return true;
+      }
+    };
+
+    while (attempts < maxAttempts) {
+      const isDone = await checkStatus();
+      if (isDone) break;
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      setError('Analysis timeout. Please try again.');
+      setLoading(false);
       setShowProcessing(false);
     }
   };

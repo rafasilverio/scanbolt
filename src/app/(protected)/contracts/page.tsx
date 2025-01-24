@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Upload, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { Contract } from '@prisma/client';
 
 export default async function ContractsPage() {
   const session = await getServerSession(authOptions);

@@ -1,32 +1,37 @@
 import { useState, useCallback } from 'react';
-import { Highlight } from '@/types/contract';
+import { ContractIssue } from '@/types/contract';
 
-export function useHighlights(initialHighlights: Highlight[] = []) {
-  const [highlights, setHighlights] = useState<Highlight[]>(initialHighlights);
-  const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
+export function useHighlights(issues: ContractIssue[]) {
+  const [selectedHighlight, setSelectedHighlight] = useState<ContractIssue | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  const handleHighlightClick = useCallback((highlight: Highlight) => {
-    setSelectedHighlightId(highlight.id);
+  const onHighlightClick = useCallback((issue: ContractIssue) => {
+    setSelectedHighlight(issue);
+    setCurrentIndex(issues.findIndex(h => h.id === issue.id));
+  }, [issues]);
+
+  const onUpgradeHighlight = useCallback(() => {
+    // Implementação do upgrade
   }, []);
 
-  const handleNextHighlight = useCallback(() => {
-    if (!selectedHighlightId || !highlights.length) return;
+  const onNextHighlight = useCallback(() => {
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < issues.length) {
+      setCurrentIndex(nextIndex);
+      setSelectedHighlight(issues[nextIndex]);
+    }
+  }, [currentIndex, issues]);
 
-    const currentIndex = highlights.findIndex(h => h.id === selectedHighlightId);
-    const nextIndex = (currentIndex + 1) % highlights.length;
-    setSelectedHighlightId(highlights[nextIndex].id);
-  }, [highlights, selectedHighlightId]);
-
-  const handleCloseHighlight = useCallback(() => {
-    setSelectedHighlightId(null);
+  const onCloseHighlight = useCallback(() => {
+    setSelectedHighlight(null);
   }, []);
 
   return {
-    highlights,
-    selectedHighlightId,
-    selectedHighlight: highlights.find(h => h.id === selectedHighlightId),
-    onHighlightClick: handleHighlightClick,
-    onNextHighlight: handleNextHighlight,
-    onCloseHighlight: handleCloseHighlight
+    selectedHighlight,
+    isFirstHighlight: currentIndex === 0,
+    onHighlightClick,
+    onUpgradeHighlight,
+    onNextHighlight,
+    onCloseHighlight
   };
 }

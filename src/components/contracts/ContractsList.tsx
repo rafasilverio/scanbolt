@@ -25,18 +25,18 @@ export function ContractsList({ contracts }: ContractsListProps) {
     }
   };
 
-  const getHighlightsCount = (contract: Contract) => {
+  const getIssuesCount = (contract: Contract) => {
     try {
-      if (!contract.highlights) return 0;
+      if (!contract.issues) return 0;
       
-      if (Array.isArray(contract.highlights)) {
-        return contract.highlights.length;
+      if (Array.isArray(contract.issues)) {
+        return contract.issues.length;
       }
       
-      const parsed = JSON.parse(contract.highlights);
+      const parsed = JSON.parse(contract.issues as string);
       return Array.isArray(parsed) ? parsed.length : 0;
     } catch (error) {
-      console.error('Error parsing highlights:', error);
+      console.error('Error parsing issues:', error);
       return 0;
     }
   };
@@ -79,7 +79,7 @@ export function ContractsList({ contracts }: ContractsListProps) {
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="w-3 h-3" />
                 <span>
-                  {getHighlightsCount(contract)} issues found
+                  {getIssuesCount(contract)} issues found
                 </span>
               </div>
             </CardFooter>
