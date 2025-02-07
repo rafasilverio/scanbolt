@@ -6026,6 +6026,315 @@ export async function POST(request: Request) {
 
     if (previewError || !previewCache) {
       console.error('Preview cache error:', previewError);
+      return NextResponse.json(
+        { error: 'Preview not found' },
+        { status: 404 }
+      );
+    }
+
+    // Criar contrato seguindo exatamente a interface Contract
+    const contract = await prisma.contract.create({
+      data: {
+        userId: session.user.id,
+        fileUrl: '', // Será atualizado durante o processamento
+        fileName: previewCache.data.fileName,
+        fileType: previewCache.data.fileType || 'application/pdf',
+        content: previewCache.data.content || '',
+        issues: [], // Array vazio inicial
+        suggestedClauses: [], // Array vazio inicial
+        status: 'analyzing',
+        metadata: {
+          pageCount: previewCache.data.metadata?.pageCount || 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          originalFileName: previewCache.data.fileName,
+          fileSize: previewCache.data.metadata?.fileSize || 0,
+        }
+      }
+    });
+
+    // Log para debug (omitindo dados sensíveis)
+    console.log('Created contract:', {
+      ...contract,
+      content: '[content omitted]',
+      issues: contract.issues?.length || 0,
+      suggestedClauses: contract.suggestedClauses?.length || 0
+    });
+
+    // Iniciar processamento em background
+    if (previewCache.data.content) {
+      const fileBuffer = Buffer.from(previewCache.data.content, 'base64');
+      const file = new File([fileBuffer], previewCache.data.fileName, {
+        type: previewCache.data.fileType || 'application/pdf'
+      });
+      
+      processContractInBackground(contract.id, file, session.user.id);
+    } else {
+      console.error('No content found in preview cache');
+    }
+
+    // Limpar cache após sucesso
+    await supabaseAdmin
+      .from('preview_cache')
+      .delete()
+      .eq('id', tempId);
+
+    return NextResponse.json({
+      success: true,
+      contractId: contract.id
+    });
+
+  } catch (error) {
+    console.error('Migration error:', error);
+    return NextResponse.json(
+      { 
+        error: error instanceof Error ? error.message : 'Failed to migrate contract',
+        details: error instanceof Error ? error.stack : undefined
+      },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+```
+
+Principais mudanças:
+1. Importação correta dos tipos do Contract
+2. Estrutura do contrato seguindo exatamente a interface
+3. Arrays vazios iniciais para issues e suggestedClauses
+4. Datas corretas no metadata
+5. Todos os campos obrigatórios preenchidos
+6. Melhor tipagem dos dados
+
+Agora o contrato deve ser criado seguindo exatamente a estrutura definida na interface `Contract`. Me avise se aparecer algum outro erro!
+
+---
+
+_**User**_
+
+ótimo, funcionou!
+
+Agora uma única coisa é que ele o usuario é redirecionado logo após o migrate finalizar e não da tempo de a analise do @processContractInBackground() finalizar. O Contrato salva corretamente mas ele fica no estado "analyzing" o ideal seria termos um loading para estes casos e só abrir quando ele atingir o "under_review" ou seja, após a função finalizar o update da analise com as issues do Contrato.
+
+Conseguimos fazer isso sem quebrar o que temos agora?
+
+---
+
+_**Assistant**_
+
+
+
+Sim! Podemos adicionar um estado de loading e verificação do status do contrato antes de redirecionar. Vamos ajustar o `PreviewRegisterDialog.tsx`:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+export function PreviewRegisterDialog({
+  open,
+  onOpenChange,
+  tempId
+}: PreviewRegisterDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'migrating' | 'analyzing' | 'completed'>('idle');
+  const router = useRouter();
+
+  // Função para verificar o status do contrato
+  const checkContractStatus = async (contractId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/status`);
+      const data = await response.json();
+      
+      if (data.status === 'under_review' || data.status === 'completed') {
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking contract status:', error);
+      return false;
+    }
+  };
+
+  const handleMigration = async () => {
+    try {
+      setMigrationStatus('migrating');
+      
+      const response = await fetch('/api/preview/migrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempId })
+      });
+
+      if (!response.ok) throw new Error('Migration failed');
+      
+      const { contractId } = await response.json();
+      
+      // Aguardar o processamento do contrato
+      setMigrationStatus('analyzing');
+      
+      // Polling para verificar o status do contrato
+      const maxAttempts = 30; // 30 segundos
+      let attempts = 0;
+      
+      while (attempts < maxAttempts) {
+        const isComplete = await checkContractStatus(contractId);
+        
+        if (isComplete) {
+          setMigrationStatus('completed');
+          router.push(`/contracts/${contractId}`);
+          return;
+        }
+        
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
+      }
+      
+      // Se chegou aqui, timeout
+      throw new Error('Contract processing timeout');
+      
+    } catch (error) {
+      console.error('Migration error:', error);
+      toast.error('Failed to process contract');
+    } finally {
+      if (migrationStatus !== 'completed') {
+        setMigrationStatus('idle');
+      }
+      onOpenChange(false);
+    }
+  };
+
+  // Resto do componente permanece igual...
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        {/* ... outros elementos ... */}
+        
+        {migrationStatus === 'analyzing' && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  Analyzing Your Contract
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Please wait while our AI analyzes your contract. This may take a few seconds...
+                </p>
+                <div className="flex justify-center">
+                  <Icons.spinner className="h-8 w-8 animate-spin text-blue-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* ... resto do conteúdo ... */}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+E precisamos criar uma nova rota para verificar o status do contrato:
+
+```typescript:src/app/api/contracts/[id]/status/route.ts
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+
+const prisma = new PrismaClient();
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const contract = await prisma.contract.findUnique({
+      where: { id: params.id },
+      select: { status: true }
+    });
+
+    if (!contract) {
+      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ status: contract.status });
+
+  } catch (error) {
+    console.error('Status check error:', error);
+    return NextResponse.json(
+      { error: 'Failed to check contract status' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+```
+
+Principais mudanças:
+1. Adicionado estado de migração/análise
+2. Implementado polling para verificar o status do contrato
+3. Adicionado feedback visual durante a análise
+4. Nova rota para verificar o status do contrato
+5. Redirecionamento apenas após conclusão da análise
+
+Agora o usuário verá um loading enquanto o contrato está sendo analisado e só será redirecionado quando a análise estiver completa. O timeout de 30 segundos evita que o usuário fique preso caso algo dê errado.
+
+Quer que eu ajuste algo nessa implementação?
+
+---
+
+_**User**_
+
+nós ja temos uma rota de status, verifique se podemos utilizar a mesma ou se precisa ser diferente.
+
+---
+
+_**Assistant**_
+
+
+
+Ah sim! Você está certo. Analisando o arquivo que você mostrou anteriormente, já temos a rota de status em `src/app/api/contracts/[id]/status/route.ts` que retorna:
+
+```typescript
+{
+  status: contract.status,
+  issues: contract.issues,
+  suggestedClauses: contract.suggestedClauses,
+  isAnalysisComplete: contract.status === 'under_review' && 
+                     Array.isArray(contract.issues) && 
+                     contract.issues.length > 0
+}
+```
+
+Vamos ajustar o `PreviewRegisterDialog.tsx` para usar essa rota existente:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+  // Função para verificar o status do contrato
+  const checkContractStatus = async (contractId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/status`);
+      const data = await response.json();
+      
+      // Usar o isAnalysisComplete que já existe na rota
+      return data.isAnalysisComplete === true;
+      
+    } catch (error) {
+      console.error('Error checking contract status:', error);
+      return false;
+    }
+  };
+```
+
+Não precisamos criar uma nova rota, pois a existente já tem tudo que precisamos e ainda mais informações úteis. A verificação usando `isAnalysisComplete` é mais robusta pois verifica não só o status mas também a existência de issues.
+
+Quer que eu faça mais algum ajuste?
 
 ---
 

@@ -35,6 +35,7 @@ export function PreviewRegisterDialog({
 }: PreviewRegisterDialogProps) {
   const [authMode, setAuthMode] = useState<AuthMode>('register');
   const [isLoading, setIsLoading] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'migrating' | 'analyzing' | 'completed'>('idle');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -44,25 +45,65 @@ export function PreviewRegisterDialog({
     signIn('google', { callbackUrl: `/api/preview/migrate?tempId=${tempId}` });
   };
 
+  // Função para verificar o status do contrato
+  const checkContractStatus = async (contractId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/status`);
+      const data = await response.json();
+      
+      // Usar o isAnalysisComplete que já existe na rota
+      return data.isAnalysisComplete === true;
+      
+    } catch (error) {
+      console.error('Error checking contract status:', error);
+      return false;
+    }
+  };
+
   const handleMigration = async () => {
     try {
+      setMigrationStatus('migrating');
+      
       const response = await fetch('/api/preview/migrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tempId })
       });
 
-      if (!response.ok) throw new Error('Falha na migração');
+      if (!response.ok) throw new Error('Migration failed');
       
       const { contractId } = await response.json();
       
-      // Redirecionar para o contrato
-      router.push(`/contracts/${contractId}`);
+      // Aguardar o processamento do contrato
+      setMigrationStatus('analyzing');
+      
+      // Polling para verificar o status do contrato
+      const maxAttempts = 30; // 30 segundos
+      let attempts = 0;
+      
+      while (attempts < maxAttempts) {
+        const isComplete = await checkContractStatus(contractId);
+        
+        if (isComplete) {
+          setMigrationStatus('completed');
+          router.push(`/contracts/${contractId}`);
+          return;
+        }
+        
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
+      }
+      
+      // Se chegou aqui, timeout
+      throw new Error('Contract processing timeout');
       
     } catch (error) {
-      toast.error('Falha ao criar contrato');
-      console.error('Erro:', error);
+      console.error('Migration error:', error);
+      toast.error('Failed to process contract');
     } finally {
+      if (migrationStatus !== 'completed') {
+        setMigrationStatus('idle');
+      }
       onOpenChange(false);
     }
   };
@@ -212,6 +253,24 @@ export function PreviewRegisterDialog({
             </>
           )}
         </p>
+
+        {migrationStatus === 'analyzing' && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  Analyzing Your Contract
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Please wait while our AI analyzes your contract. This may take a few seconds...
+                </p>
+                <div className="flex justify-center">
+                  <Icons.spinner className="h-8 w-8 animate-spin text-blue-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
