@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { GoogleIcon } from "../ui/google-icon";
+import { Progress } from "@/components/ui/progress";
 
 interface PreviewRegisterDialogProps {
   open: boolean;
@@ -40,7 +41,30 @@ export function PreviewRegisterDialog({
   const router = useRouter();
 
   const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: `/contracts/${tempId}` });
+    signIn('google', { callbackUrl: `/api/preview/migrate?tempId=${tempId}` });
+  };
+
+  const handleMigration = async () => {
+    try {
+      const response = await fetch('/api/preview/migrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempId })
+      });
+
+      if (!response.ok) throw new Error('Falha na migração');
+      
+      const { contractId } = await response.json();
+      
+      // Redirecionar para o contrato
+      router.push(`/contracts/${contractId}`);
+      
+    } catch (error) {
+      toast.error('Falha ao criar contrato');
+      console.error('Erro:', error);
+    } finally {
+      onOpenChange(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,34 +104,11 @@ export function PreviewRegisterDialog({
       }
 
       // Migrate preview data if registration was successful
-      const response = await fetch('/api/preview/migrate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tempId })
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('Migration error:', data);
-        throw new Error(data.error || 'Failed to migrate contract');
-      }
-
-      if (!data.contract?.id) {
-        throw new Error('No contract ID received');
-      }
-
-      toast.success(authMode === 'register' 
-        ? "Account created! Redirecting to your analysis..." 
-        : "Welcome back! Redirecting to your analysis..."
-      );
-
-      onOpenChange(false);
-      router.push(`/contracts/${data.contract.id}`);
+      await handleMigration();
 
     } catch (error) {
-      console.error('Auth error:', error);
-      setError(error instanceof Error ? error.message : 'Something went wrong');
+      console.log('Auth error:', error);
+      setError(error instanceof Error ? error.message : 'Authentication failed');
     } finally {
       setIsLoading(false);
     }

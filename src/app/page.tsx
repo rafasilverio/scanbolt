@@ -4,7 +4,9 @@ import Link from "next/link";
 import { ArrowRight, Shield, Zap, Brain, Share2, CheckCircle, Star, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContractUploader } from "@/components/contracts/upload/ContractUploader";
+import { PreviewUploader } from "@/components/home/PreviewUploader";
 import { useSession } from "next-auth/react";
+import { UploadZone } from "@/components/contracts/upload/UploadZone";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -96,14 +98,27 @@ export default function Home() {
             <span className="text-sm text-white">Trusted by 10,000+ users worldwide</span>
           </div>
 
-          <h1 className="text-5xl font-bold mb-6 text-white">
-            Review Any Contract in Minutes
-          </h1>
-          <p className="text-xl text-[#BFDBFE] mb-12 max-w-3xl mx-auto">
-            Never miss hidden clauses or unfair terms. Get instant analysis and fair versions for both parties - no legal expertise needed.
-          </p>
-
-          <ContractUploader />
+          {session?.user ? (
+            <div className="max-w-2xl mx-auto space-y-6">
+              <h1 className="text-3xl font-bold">Upload Contract</h1>
+              <p className="text-gray-300">
+                Upload your contract to get started with AI-powered analysis
+              </p>
+              <div className="bg-gradient-to-b from-indigo-950 to-indigo-900 rounded-2xl shadow-xl border border-white/20 p-8">
+                <UploadZone />
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-5xl font-bold mb-6 text-white">
+                Review Any Contract in Minutes
+              </h1>
+              <p className="text-xl text-[#BFDBFE] mb-12 max-w-3xl mx-auto">
+                Never miss hidden clauses or unfair terms. Get instant analysis and fair versions for both parties - no legal expertise needed.
+              </p>
+              <PreviewUploader />
+            </>
+          )}
         </div>
       </section>
 
@@ -152,16 +167,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA Section - Ajustado baseado no status do login */}
       <section className="container mx-auto px-6 py-20">
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Contract Analysis?</h2>
+          <h2 className="text-3xl font-bold mb-4">
+            {session?.user 
+              ? "Need Help With Your Contracts?"
+              : "Ready to Transform Your Contract Analysis?"
+            }
+          </h2>
           <p className="text-white/80 mb-8">
-            Join thousands of professionals who trust Scancontract for their contract analysis needs.
+            {session?.user
+              ? "Our support team is here to help you get the most out of Scancontract"
+              : "Join thousands of professionals who trust Scancontract for their contract analysis needs."
+            }
           </p>
-          <Link href="/auth/register">
+          <Link href={session?.user ? "/support" : "/auth/register"}>
             <Button size="lg" className="rounded-full bg-white text-primary hover:bg-gray-100">
-              Start Your Free Trial
+              {session?.user ? "Contact Support" : "Start Your Free Trial"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>

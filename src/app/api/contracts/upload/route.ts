@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function processContractInBackground(contractId: string, file: File, userId: string) {
+export async function processContractInBackground(contractId: string, file: File, userId: string) {
   try {
     // 1. Upload do arquivo para o Supabase
     const sanitizedFileName = sanitizeFileName(file.name);

@@ -47,27 +47,41 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+    const url = new URL(request.url);
+    const statusCheck = url.searchParams.get('status') === 'true';
+
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const contract = await prisma.contract.findUnique({
-      where: {
-        id: params.id
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true
-          }
+    // Consulta otimizada para verificação de status
+    if (statusCheck) {
+      const contract = await prisma.contract.findUnique({
+        where: { id: params.id },
+        select: { 
+          status: true,
+          issues: true,
+          suggestedClauses: true,
+          userId: true
         }
+      });
+
+      if (!contract || contract.userId !== session.user.id) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
       }
+
+      return NextResponse.json({
+        status: contract.status,
+        isAnalysisComplete: contract.status === 'under_review' && 
+                           Array.isArray(contract.issues) && 
+                           contract.issues.length > 0
+      });
+    }
+
+    // Consulta completa (mantendo funcionalidade existente)
+    const contract = await prisma.contract.findUnique({
+      where: { id: params.id },
+      include: { user: { select: { id: true, email: true, name: true } } }
     });
 
     if (!contract) {

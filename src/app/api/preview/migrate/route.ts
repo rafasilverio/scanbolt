@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
-import prisma from '@/lib/prisma';
-import crypto from 'crypto';
+import { PrismaClient } from '@prisma/client';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { processContractInBackground } from '@/app/api/contracts/upload/route';
+import { Blob, File } from 'fetch-blob/from.js';
+import { Contract, ContractIssue, SuggestedClause } from '@/types/contract';
+
+const prisma = new PrismaClient();
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,84 +20,110 @@ const supabaseAdmin = createClient(
   }
 );
 
-export async function POST(req: Request) {
+export const maxDuration = 300;
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: Request) {
   try {
+    // Verificar autenticação
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { tempId } = await req.json();
+    // Obter tempId do corpo da requisição
+    const { tempId } = await request.json();
     if (!tempId) {
-      return NextResponse.json({ error: 'No tempId provided' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing tempId' }, { status: 400 });
     }
 
-    // Get the REAL preview data from cache using supabaseAdmin
+    // Buscar dados do preview
     const { data: previewCache, error: previewError } = await supabaseAdmin
       .from('preview_cache')
-      .select('data')
+      .select('*')
       .eq('id', tempId)
       .single();
 
     if (previewError || !previewCache) {
       console.error('Preview cache error:', previewError);
       return NextResponse.json(
-        { error: 'Preview data not found' },
+        { error: 'Preview not found' },
         { status: 404 }
       );
     }
 
-    const previewData = previewCache.data;
+    // Verificar se os dados necessários existem
+    if (!previewCache.data || !previewCache.data.fileName) {
+      console.error('Invalid preview data:', previewCache);
+      return NextResponse.json(
+        { error: 'Invalid preview data' },
+        { status: 400 }
+      );
+    }
 
-    // Create contract with the REAL data from upload
+    // Criar contrato seguindo exatamente a interface Contract
     const contract = await prisma.contract.create({
       data: {
-        id: crypto.randomUUID(),
-        title: previewData.title || previewData.fileName,
-        content: previewData.content,
-        fileUrl: previewData.fileUrl || '',
-        fileType: previewData.fileType,
-        fileName: previewData.fileName,
-        status: "under_review",
-        highlights: JSON.stringify(previewData.highlights || []),
-        changes: JSON.stringify(previewData.changes || []),
-        pdfPositions: previewData.pdfPositions || [],
-        numPages: previewData.numPages || 1,
-        user: {
-          connect: {
-            id: session.user.id
-          }
+        userId: session.user.id,
+        fileUrl: '', // Será atualizado durante o processamento
+        fileName: previewCache.data.fileName,
+        title: previewCache.data.fileName,
+        fileType: previewCache.data.fileType || 'application/pdf',
+        content: previewCache.data.content || '',
+        issues: [], // Array vazio inicial
+        suggestedClauses: [], // Array vazio inicial
+        status: 'analyzing',
+        metadata: {
+          pageCount: previewCache.data.metadata?.pageCount || 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          originalFileName: previewCache.data.fileName,
+          fileSize: previewCache.data.metadata?.fileSize || 0,
         }
       }
     });
 
-    // Delete preview from cache after successful migration using supabaseAdmin
-    const { error: deleteError } = await supabaseAdmin
+    // Log para debug (omitindo dados sensíveis)
+    console.log('Created contract:', {
+      ...contract,
+      content: '[content omitted]',
+      issues: contract.issues?.length || 0,
+      suggestedClauses: contract.suggestedClauses?.length || 0
+    });
+
+    // Iniciar processamento em background
+    if (previewCache.data.content) {
+      const fileBuffer = Buffer.from(previewCache.data.content, 'base64');
+      const file = new File([fileBuffer], previewCache.data.fileName, {
+        type: previewCache.data.fileType || 'application/pdf'
+      });
+      
+      processContractInBackground(contract.id, file, session.user.id);
+    } else {
+      console.error('No content found in preview cache');
+    }
+
+    // Limpar cache após sucesso
+    await supabaseAdmin
       .from('preview_cache')
       .delete()
       .eq('id', tempId);
 
-    if (deleteError) {
-      console.error('Error deleting preview cache:', deleteError);
-    }
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      contract: {
-        ...contract,
-        highlights: JSON.parse(contract.highlights),
-        changes: JSON.parse(contract.changes),
-        pdfPositions: Array.isArray(contract.pdfPositions) 
-          ? contract.pdfPositions 
-          : JSON.parse(contract.pdfPositions || '[]')
-      }
+      contractId: contract.id
     });
 
   } catch (error) {
     console.error('Migration error:', error);
     return NextResponse.json(
-      { error: 'Failed to migrate preview data', details: error },
+      { 
+        error: error instanceof Error ? error.message : 'Failed to migrate contract',
+        details: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

@@ -1,68 +1,103 @@
 "use client";
 
-import { useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { DEFAULT_PREVIEW_STATS } from '@/types/preview';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Contract } from '@/types/contract';
+import { FileText, LockKeyhole, Sparkles } from 'lucide-react';
 
 interface BlurredPreviewProps {
   tempId: string;
   onViewFullAnalysis: () => void;
-  contract: any;
+  contract: Contract;
 }
 
 export function BlurredPreview({ tempId, onViewFullAnalysis, contract }: BlurredPreviewProps) {
+  const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
+
   useEffect(() => {
-    const savePreview = async () => {
-      // Criar dados do preview usando os dados reais do contrato
-      const previewData = {
-        id: tempId,
-        data: {
-          title: contract.title,
-          content: contract.content,
-          fileUrl: contract.fileUrl,
-          fileType: contract.fileType,
-          fileName: contract.fileName || 'contract.pdf',
-          highlights: contract.highlights || [
-            ...Array(DEFAULT_PREVIEW_STATS.critical.count).fill({ type: 'critical' }),
-            ...Array(DEFAULT_PREVIEW_STATS.warning.count).fill({ type: 'warning' }),
-            ...Array(DEFAULT_PREVIEW_STATS.improvement.count).fill({ type: 'improvement' })
-          ]
-        },
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000) // expira em 24 horas
-      };
+    const fetchPreviewData = async () => {
+      try {
+        setIsSaving(true);
+        
+        // Fazer GET em vez de POST
+        const response = await fetch(`/api/preview/${tempId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-      console.log('Saving preview data:', previewData);
+        if (!response.ok) {
+          throw new Error('Failed to fetch preview');
+        }
 
-      // Salvar no Supabase
-      const { data, error } = await supabase
-        .from('preview_cache')
-        .upsert(previewData)
-        .select();
+        const result = await response.json();
+        console.log('Preview fetched successfully:', result);
 
-      if (error) {
-        console.error('Error saving preview:', error);
-      } else {
-        console.log('Preview saved successfully:', data);
+      } catch (error) {
+        console.error('Error fetching preview:', error);
+      } finally {
+        setIsSaving(false);
       }
     };
 
-    savePreview();
+    if (tempId && contract) {
+      fetchPreviewData();
+    }
   }, [tempId, contract]);
 
   return (
-    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-      <div className="text-center p-8">
-        <button 
-          onClick={onViewFullAnalysis}
-          className="bg-[#2563EB] hover:bg-[#5000f7] text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors"
-        >
-          View Full Analysis
-        </button>
+    <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/95 to-indigo-900/95 backdrop-blur-sm flex flex-col items-center justify-center">
+      <div className="max-w-xl w-full mx-auto p-6">
+        <div className="bg-gradient-to-b from-indigo-900/40 to-indigo-900/20 rounded-2xl backdrop-blur-sm p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+              <LockKeyhole className="w-8 h-8 text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Want to See the Full Analysis?
+            </h2>
+            <p className="text-white/60">
+              Create an account or sign in to view the complete contract analysis and all our powerful features.
+            </p>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="flex items-center space-x-3 text-white/80">
+              <FileText className="w-5 h-5 text-blue-400" />
+              <span>Detailed Analysis</span>
+            </div>
+            <div className="flex items-center space-x-3 text-white/80">
+              <Sparkles className="w-5 h-5 text-blue-400" />
+              <span>AI-Powered Insights</span>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <button
+            onClick={onViewFullAnalysis}
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-400 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-500 transition-all duration-300 font-medium shadow-lg hover:shadow-blue-500/25"
+          >
+            View Full Analysis
+          </button>
+
+          {/* Trust Indicators */}
+          <div className="mt-8 pt-6 border-t border-white/10">
+            <div className="flex items-center justify-center space-x-6 text-sm text-white/60">
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full bg-green-400 mr-2" />
+                Bank-Level Security
+              </div>
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full bg-green-400 mr-2" />
+                AI-Powered Analysis
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

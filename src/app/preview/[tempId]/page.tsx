@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Contract } from '@/types/contract';
 import { useRouter } from 'next/navigation';
 import { DocumentWrapper } from '@/components/contracts/DocumentWrapper';
@@ -12,39 +12,29 @@ import { PreviewRegisterDialog } from '@/components/auth/PreviewRegisterDialog';
 import { BlurredPreview } from '@/components/preview/BlurredPreview';
 
 export default function PreviewPage({ params }: { params: { tempId: string } }) {
-  const [zoom, setZoom] = useState(110);
+  const [previewData, setPreviewData] = useState<Contract | null>(null);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const router = useRouter();
+  const [zoom, setZoom] = useState(110);
 
-  // Dados mockados para preview com highlights baseados no DEFAULT_PREVIEW_STATS
-  const previewContract: Contract = {
-    id: params.tempId,
-    title: 'Software Development Agreement',
-    content: `This Software Development Agreement (the "Agreement") is made and entered into on [DATE], by and between:
+  useEffect(() => {
+    const fetchPreviewData = async () => {
+      try {
+        const response = await fetch(`/api/preview/${params.tempId}`);
+        if (!response.ok) {
+          router.push('/'); // Redireciona para home se preview não existir
+          return;
+        }
+        const data = await response.json();
+        setPreviewData(data);
+      } catch (error) {
+        console.error('Error fetching preview:', error);
+        router.push('/');
+      }
+    };
 
-[CLIENT NAME], organized and existing under the laws of [JURISDICTION], with its principal place of business at [ADDRESS] (hereinafter referred to as the "Client")
-
-and
-
-[DEVELOPER NAME], a software development company organized and existing under the laws of [ADDRESS] (hereinafter referred to as the "Developer")
-
-1. SCOPE OF WORK
-
-1.1 The Developer agrees to design, develop, and deliver a software application (the "Software") according to the specifications provided in Appendix A.
-
-1.2 The Software shall include the following features and functionalities: [LIST OF FEATURES]
-
-2. TIMELINE AND DELIVERABLES`,
-    status: 'under_review',
-    fileName: 'contract.pdf',
-    fileType: 'application/pdf',
-    highlights: [
-      ...Array(DEFAULT_PREVIEW_STATS.critical.count).fill({ type: 'critical' }),
-      ...Array(DEFAULT_PREVIEW_STATS.warning.count).fill({ type: 'warning' }),
-      ...Array(DEFAULT_PREVIEW_STATS.improvement.count).fill({ type: 'improvement' })
-    ],
-    changes: []
-  };
+    fetchPreviewData();
+  }, [params.tempId]);
 
   const handleViewFullAnalysis = () => {
     setShowRegisterDialog(true);
@@ -100,44 +90,22 @@ and
 
       {/* Main Content */}
       <div className="flex-1 flex">
-        {/* Document Area */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 h-[calc(100vh-4rem)] overflow-hidden">
-            <div className="flex-1 overflow-y-auto bg-gray-50 relative">
-              <div 
-                className="container max-w-4xl mx-auto py-4"
-                style={{ 
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: 'top center',
-                  transition: 'transform 0.2s ease-in-out'
-                }}
-              >
-                <DocumentWrapper contract={previewContract}>
-                  <div className="relative">
-                    <ContractContent
-                      contract={previewContract}
-                      highlights={[]}
-                      onHighlightClick={() => {}}
-                      selectedHighlight={null}
-                      selectedChange={null}
-                      onChangeSelect={() => {}}
-                    />
-                    <BlurredPreview 
-                      tempId={params.tempId}
-                      onViewFullAnalysis={handleViewFullAnalysis}
-                      contract={previewContract}
-                    />
-                  </div>
-                </DocumentWrapper>
-              </div>
-            </div>
-            <DocumentToolbar
-              zoom={zoom}
-              onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
-              onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
-              onZoomReset={() => setZoom(100)}
+        <div className="flex-1">
+          <DocumentWrapper contract={previewData}>
+            <ContractContent
+              contract={previewData}
+              highlights={[]}
+              onHighlightClick={() => {}}
+              selectedHighlight={null}
+              selectedChange={null}
+              onChangeSelect={() => {}}
             />
-          </div>
+            <BlurredPreview 
+              tempId={params.tempId}
+              onViewFullAnalysis={handleViewFullAnalysis}
+              contract={previewData}
+            />
+          </DocumentWrapper>
         </div>
 
         {/* Right Sidebar */}
@@ -170,7 +138,6 @@ and
         </div>
       </div>
 
-      {/* Registration Dialog */}
       <PreviewRegisterDialog 
         open={showRegisterDialog}
         onOpenChange={setShowRegisterDialog}
