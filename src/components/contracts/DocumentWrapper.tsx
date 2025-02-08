@@ -26,13 +26,13 @@ export function DocumentWrapper({ children, className, contract }: DocumentWrapp
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-t-lg border-b border-gray-200 p-4"
       >
-        <Button 
+        {/* <Button 
           onClick={() => {}}
           className="bg-green-600 hover:bg-green-700 text-white transition-colors"
           size="sm"
         >
           Start Review
-        </Button>
+        </Button> */}
       </motion.div>
 
       {/* Main document content */}

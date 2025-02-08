@@ -79,7 +79,7 @@ export function PDFViewer({
 
   const convertIssueToHighlight = useCallback((issue: ContractIssue): CustomHighlight => {
     // Ajustar escala para o PDF viewer - usar scale do PDF.js
-    const scale = 1;
+    const scale = 0.75;
     
     const highlight: CustomHighlight = {
       id: issue.id,

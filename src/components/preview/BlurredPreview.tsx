@@ -1,52 +1,15 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Contract } from '@/types/contract';
-import { FileText, LockKeyhole, Sparkles } from 'lucide-react';
+import { LockKeyhole, FileText, Sparkles } from 'lucide-react';
 
 interface BlurredPreviewProps {
   tempId: string;
   onViewFullAnalysis: () => void;
-  contract: Contract;
+  contract: Contract | null;
 }
 
 export function BlurredPreview({ tempId, onViewFullAnalysis, contract }: BlurredPreviewProps) {
-  const [isSaving, setIsSaving] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    const fetchPreviewData = async () => {
-      try {
-        setIsSaving(true);
-        
-        // Fazer GET em vez de POST
-        const response = await fetch(`/api/preview/${tempId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch preview');
-        }
-
-        const result = await response.json();
-        console.log('Preview fetched successfully:', result);
-
-      } catch (error) {
-        console.error('Error fetching preview:', error);
-      } finally {
-        setIsSaving(false);
-      }
-    };
-
-    if (tempId && contract) {
-      fetchPreviewData();
-    }
-  }, [tempId, contract]);
-
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/95 to-indigo-900/95 backdrop-blur-sm flex flex-col items-center justify-center">
       <div className="max-w-xl w-full mx-auto p-6">

@@ -6338,6 +6338,2357 @@ Quer que eu faça mais algum ajuste?
 
 ---
 
+_**User**_
+
+agora vamos trabalhar na atualização do visual da página do preview @page.tsx .
+
+Olha na imagem como ela está desatualizada.
+
+Vamos fazer o seguinte:
+- Mantenha a barra superior fina como esta
+- Atualize o Box azul com a "Critical Issue" para algo mais centralizado e menos tela toda. Mas deixe ele com a mesma sensação de urgência como esta agora
+- No background e blur de fundo, remova tudo e deixe somente como está no azul com o box do Want to see the full analysis? na tela
+
+---
+
+_**Assistant**_
+
+
+
+Vou ajustar o `preview/[tempId]/page.tsx` para ficar mais limpo e moderno, seguindo o layout da imagem:
+
+```typescript:src/app/preview/[tempId]/page.tsx
+"use client";
+
+import { useState, useEffect } from 'react';
+import { Contract } from '@/types/contract';
+import { useRouter } from 'next/navigation';
+import { DocumentWrapper } from '@/components/contracts/DocumentWrapper';
+import { ContractContent } from '@/components/contracts/ContractContent';
+import { AlertCircle } from 'lucide-react';
+import { DEFAULT_PREVIEW_STATS } from '@/types/preview';
+import { PreviewRegisterDialog } from '@/components/auth/PreviewRegisterDialog';
+import { BlurredPreview } from '@/components/preview/BlurredPreview';
+
+export default function PreviewPage({ params }: { params: { tempId: string } }) {
+  const [previewData, setPreviewData] = useState<Contract | null>(null);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchPreviewData = async () => {
+      try {
+        const response = await fetch(`/api/preview/${params.tempId}`);
+        if (!response.ok) {
+          router.push('/');
+          return;
+        }
+        const data = await response.json();
+        setPreviewData(data);
+      } catch (error) {
+        console.error('Error fetching preview:', error);
+        router.push('/');
+      }
+    };
+
+    fetchPreviewData();
+  }, [params.tempId]);
+
+  const handleViewFullAnalysis = () => {
+    setShowRegisterDialog(true);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#5000f7]">
+      {/* Header */}
+      <header className="bg-[#5000f7] text-white border-b border-white/10">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center h-16">
+            <div className="flex items-center mr-8">
+              <span className="text-xl font-bold">
+                Scancontract
+              </span>
+            </div>
+
+            <div className="ml-auto">
+              <button 
+                onClick={handleViewFullAnalysis}
+                className="flex items-center text-sm font-medium bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                View Full Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Critical Issues Alert - Mais compacto e centralizado */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-gradient-to-r from-red-900 to-red-800 rounded-xl p-6 shadow-xl">
+            <div className="flex items-center gap-3 text-red-100 font-semibold text-lg mb-4">
+              <AlertCircle className="w-6 h-6 text-red-400" />
+              <span className="tracking-tight">Critical Issues Detected</span>
+            </div>
+            <div className="space-y-3 text-sm text-red-100">
+              <p className="flex items-center gap-2">
+                <span className="text-base">⚠️</span>
+                <span className="font-medium">
+                  Your contract has {DEFAULT_PREVIEW_STATS.critical.count} critical issues that need immediate attention
+                </span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-base">⚠️</span>
+                <span className="font-medium">{DEFAULT_PREVIEW_STATS.critical.message}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 container mx-auto px-4 pb-6">
+        <div className="bg-white rounded-xl overflow-hidden shadow-xl">
+          <DocumentWrapper contract={previewData}>
+            <ContractContent
+              contract={previewData}
+              highlights={[]}
+              onHighlightClick={() => {}}
+              selectedHighlight={null}
+              selectedChange={null}
+              onChangeSelect={() => {}}
+            />
+            <BlurredPreview 
+              tempId={params.tempId}
+              onViewFullAnalysis={handleViewFullAnalysis}
+              contract={previewData}
+            />
+          </DocumentWrapper>
+        </div>
+      </div>
+
+      <PreviewRegisterDialog 
+        open={showRegisterDialog}
+        onOpenChange={setShowRegisterDialog}
+        tempId={params.tempId}
+      />
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Removido o sidebar direito
+2. Simplificado o layout geral
+3. Centralizado e reduzido o tamanho do alerta de issues críticas
+4. Mantido o header fino
+5. Adicionado container para melhor alinhamento
+6. Adicionado sombras e arredondamentos para melhor visual
+7. Mantido o fundo azul principal
+8. Removido gradientes desnecessários
+
+O layout agora está mais limpo e focado, com o alerta de issues críticas mais compacto mas ainda chamativo, e o conteúdo principal bem organizado. O BlurredPreview continuará funcionando como antes, mas agora em um layout mais moderno e organizado.
+
+Quer que eu ajuste algo específico nesse layout?
+
+---
+
+_**User**_
+
+ótimo!
+
+Também pode remover o "Start Review" e o texto que aparece que parece ser um id ou algo assim
+
+---
+
+_**Assistant**_
+
+
+
+Vou ajustar o `BlurredPreview.tsx` para remover esses elementos desnecessários:
+
+```typescript:src/components/preview/BlurredPreview.tsx
+"use client";
+
+import { Contract } from '@/types/contract';
+import { LockKeyhole, FileText, Sparkles } from 'lucide-react';
+
+interface BlurredPreviewProps {
+  tempId: string;
+  onViewFullAnalysis: () => void;
+  contract: Contract | null;
+}
+
+export function BlurredPreview({ tempId, onViewFullAnalysis, contract }: BlurredPreviewProps) {
+  return (
+    <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/95 to-indigo-900/95 backdrop-blur-sm flex flex-col items-center justify-center">
+      <div className="max-w-xl w-full mx-auto p-6">
+        <div className="bg-gradient-to-b from-indigo-900/40 to-indigo-900/20 rounded-2xl backdrop-blur-sm p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+              <LockKeyhole className="w-8 h-8 text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Want to See the Full Analysis?
+            </h2>
+            <p className="text-white/60">
+              Create an account or sign in to view the complete contract analysis and all our powerful features.
+            </p>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="flex items-center space-x-3 text-white/80">
+              <FileText className="w-5 h-5 text-blue-400" />
+              <span>Detailed Analysis</span>
+            </div>
+            <div className="flex items-center space-x-3 text-white/80">
+              <Sparkles className="w-5 h-5 text-blue-400" />
+              <span>AI-Powered Insights</span>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <button
+            onClick={onViewFullAnalysis}
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-400 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-500 transition-all duration-300 font-medium shadow-lg hover:shadow-blue-500/25"
+          >
+            View Full Analysis
+          </button>
+
+          {/* Trust Indicators */}
+          <div className="mt-8 pt-6 border-t border-white/10">
+            <div className="flex items-center justify-center space-x-6 text-sm text-white/60">
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full bg-green-400 mr-2" />
+                Bank-Level Security
+              </div>
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full bg-green-400 mr-2" />
+                AI-Powered Analysis
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Removido o botão "Start Review"
+2. Removido o texto com ID
+3. Mantido apenas o conteúdo essencial
+4. Mantida a estrutura visual limpa e moderna
+
+O componente agora está mais focado e limpo, mostrando apenas o necessário para o usuário entender o valor da análise completa.
+
+---
+
+_**User**_
+
+ótimo, ficou excelente!
+
+Agora vamos atualizar visualmente a progress após o usuario se registrar no /preview/[id] do @PreviewRegisterDialog.tsx ele está muito simples.
+
+Vamos deixar ele mais atual para combinar com as melhorias que fizemos.
+
+Melhore a copy dele para ser mais "cool" e descontraida
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Vou atualizar o componente de progresso no `PreviewRegisterDialog.tsx` para ficar mais moderno e com um tom mais descontraído:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+{migrationStatus === 'analyzing' && (
+  <div className="fixed inset-0 bg-indigo-950/95 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-gradient-to-b from-indigo-900/40 to-indigo-900/20 rounded-2xl backdrop-blur-sm p-8 max-w-md w-full mx-6 shadow-xl">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-6">
+          <Sparkles className="w-8 h-8 text-blue-400 animate-pulse" />
+        </div>
+        
+        <h3 className="text-2xl font-bold text-white mb-3">
+          AI Magic in Progress! ✨
+        </h3>
+        
+        <p className="text-white/70 mb-6 text-base">
+          Our AI is diving deep into your contract, uncovering insights and potential issues. Just a moment while we work our magic...
+        </p>
+
+        {/* Progress Steps */}
+        <div className="space-y-4 mb-8">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/60">Analyzing document structure</span>
+            <Icons.check className="w-5 h-5 text-green-400" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/60">Identifying key clauses</span>
+            <Icons.check className="w-5 h-5 text-green-400" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/60">Running legal analysis</span>
+            <Icons.spinner className="w-5 h-5 animate-spin text-blue-400" />
+          </div>
+        </div>
+
+        {/* Fun Facts */}
+        <div className="bg-white/5 rounded-xl p-4 text-sm text-white/60">
+          <p className="font-medium text-white mb-2">Did you know? 🤓</p>
+          <p>Our AI reads contracts faster than a lawyer on espresso! It analyzes hundreds of legal patterns in seconds.</p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mt-6">
+          <Progress 
+            value={75} 
+            className="h-2 bg-white/10" 
+            indicatorClassName="bg-gradient-to-r from-blue-500 to-blue-400"
+          />
+          <p className="text-white/40 text-sm mt-2">Almost there...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+Principais mudanças:
+1. Design mais moderno com gradientes e blur
+2. Animações suaves (pulse e spin)
+3. Progress steps visuais
+4. Barra de progresso estilizada
+5. Adicionado "Fun Facts" para entreter durante a espera
+6. Tom mais descontraído nas mensagens
+7. Ícones animados
+8. Melhor feedback visual do progresso
+9. Cores que combinam com o tema geral
+
+O componente agora:
+- É mais envolvente e interessante de olhar
+- Fornece melhor feedback sobre o que está acontecendo
+- Mantém o usuário entretido durante a espera
+- Combina com o visual moderno do resto da aplicação
+- Tem um tom mais leve e amigável
+
+Quer que eu ajuste algo no visual ou nas mensagens?
+
+---
+
+_**User**_
+
+Unhandled Runtime Error
+Error: Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+Check the render method of `PreviewRegisterDialog`.
+
+Deu este erro
+
+---
+
+_**Assistant**_
+
+
+
+Ah, precisamos importar o componente `Progress` do nosso UI kit. Vamos atualizar as importações no `PreviewRegisterDialog.tsx`:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Icons } from "@/components/ui/icons";
+import { Progress } from "@/components/ui/progress"; // Adicionado
+import { signIn } from "next-auth/react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Separator } from "@/components/ui/separator";
+import { GoogleIcon } from "../ui/google-icon";
+import { Sparkles } from "lucide-react";
+
+// ... resto do código permanece igual ...
+```
+
+O erro ocorreu porque o componente `Progress` não estava importado. Agora deve funcionar corretamente. Me avise se aparecer algum outro erro!
+
+---
+
+_**User**_
+
+ainda continua com este erro: 1 of 1 error
+Next.js (14.2.17) is outdated (learn more)
+
+Unhandled Runtime Error
+Error: Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+Check the render method of `PreviewRegisterDialog`.
+
+---
+
+_**Assistant**_
+
+
+
+Parece que o componente `Progress` não está definido corretamente. Vamos criar o componente Progress primeiro e depois usá-lo:
+
+```typescript:src/components/ui/progress.tsx
+"use client"
+
+import * as React from "react"
+import * as ProgressPrimitive from "@radix-ui/react-progress"
+
+import { cn } from "@/lib/utils"
+
+const Progress = React.forwardRef<
+  React.ElementRef<typeof ProgressPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
+    indicatorClassName?: string;
+  }
+>(({ className, value, indicatorClassName, ...props }, ref) => (
+  <ProgressPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative h-2 w-full overflow-hidden rounded-full bg-primary/20",
+      className
+    )}
+    {...props}
+  >
+    <ProgressPrimitive.Indicator
+      className={cn(
+        "h-full w-full flex-1 bg-primary transition-all",
+        indicatorClassName
+      )}
+      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+    />
+  </ProgressPrimitive.Root>
+))
+Progress.displayName = ProgressPrimitive.Root.displayName
+
+export { Progress }
+```
+
+Agora o `PreviewRegisterDialog.tsx` deve funcionar corretamente com o componente Progress. O componente usa o Radix UI para a funcionalidade base e permite customização através de classes.
+
+Certifique-se de que você tem o pacote `@radix-ui/react-progress` instalado. Se não tiver, você pode instalá-lo com:
+
+```bash
+npm install @radix-ui/react-progress
+```
+
+Me avise se o erro persistir!
+
+---
+
+_**User**_
+
+eu já tenho um criado em @progress.tsx 
+
+---
+
+_**Assistant**_
+
+
+
+Ah, desculpe! Se você já tem o componente Progress, o problema pode ser com a propriedade `indicatorClassName` que estamos tentando usar. Vamos ajustar o código do `PreviewRegisterDialog.tsx` para usar o Progress existente:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+{/* Progress Bar */}
+<div className="mt-6">
+  <Progress 
+    value={75} 
+    className="h-2 bg-white/10"
+  />
+  <p className="text-white/40 text-sm mt-2">Almost there...</p>
+</div>
+```
+
+Removi a prop `indicatorClassName` já que ela não existe no seu componente Progress. O componente deve usar a estilização padrão que você já definiu.
+
+Me avise se o erro persistir!
+
+---
+
+_**User**_
+
+ótimo, agora foi!
+
+só faça os ajustes finos por favor, ele ficou com um bloco mais escuro. Veja na imagem 
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Vou ajustar o visual para ficar mais próximo da imagem, com um fundo mais suave e uniforme:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+{migrationStatus === 'analyzing' && (
+  <div className="fixed inset-0 bg-indigo-950/90 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-indigo-900/30 backdrop-blur-sm rounded-2xl p-8 max-w-md w-full mx-6">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-6">
+          <Sparkles className="w-8 h-8 text-blue-400 animate-pulse" />
+        </div>
+        
+        <h3 className="text-2xl font-bold text-white mb-3">
+          AI Magic in Progress! ✨
+        </h3>
+        
+        <p className="text-white/70 mb-8 text-base">
+          Our AI is diving deep into your contract, uncovering insights and potential issues. Just a moment while we work our magic...
+        </p>
+
+        {/* Progress Steps */}
+        <div className="space-y-4 mb-8">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/60">Analyzing document structure</span>
+            <Icons.check className="w-5 h-5 text-green-400" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/60">Identifying key clauses</span>
+            <Icons.check className="w-5 h-5 text-green-400" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/60">Running legal analysis</span>
+            <Icons.spinner className="w-5 h-5 animate-spin text-blue-400" />
+          </div>
+        </div>
+
+        {/* Fun Facts Box */}
+        <div className="bg-indigo-900/40 rounded-xl p-4 text-sm text-white/70 mb-8">
+          <p className="font-medium text-white mb-2">Did you know? 🤓</p>
+          <p>Our AI reads contracts faster than a lawyer on espresso! It analyzes hundreds of legal patterns in seconds.</p>
+        </div>
+
+        {/* Progress Bar */}
+        <div>
+          <Progress 
+            value={75} 
+            className="h-2 bg-white/10"
+          />
+          <p className="text-white/40 text-sm mt-2">Almost there...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+
+Principais ajustes:
+1. Reduzido a opacidade do fundo principal (`bg-indigo-950/90`)
+2. Removido o gradiente do container principal
+3. Ajustado a opacidade do container do conteúdo (`bg-indigo-900/30`)
+4. Ajustado o box de "Did you know?" para ter um fundo mais suave (`bg-indigo-900/40`)
+5. Ajustado os espaçamentos para ficar mais compacto
+6. Removido algumas sombras para deixar mais clean
+7. Ajustado as opacidades dos textos para melhor legibilidade
+
+Agora deve estar mais próximo do design da imagem, com um visual mais leve e uniforme. Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+calma, eu pedi uma ajuda para arrumar, pois o da imagem estava quebrado.
+
+Verifique novamente a imagem e veja o que está ruim visualmente para corrigirmos
+
+---
+
+_**Assistant**_
+
+Ah, desculpe! Agora analisando a imagem com mais atenção, vejo que:
+
+1. O ícone de loading (spinner) está muito grande e em um azul muito claro
+2. O texto está muito apertado/junto
+3. O box de "Did you know?" está muito escuro em relação ao resto
+4. O Progress bar está muito grosso e com cor muito forte
+
+Vamos ajustar:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+{migrationStatus === 'analyzing' && (
+  <div className="fixed inset-0 bg-indigo-950/90 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-indigo-900/20 backdrop-blur-sm rounded-xl p-6 max-w-md w-full mx-6">
+      <div className="text-center">
+        {/* Ícone menor e mais suave */}
+        <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+          <Sparkles className="w-6 h-6 text-blue-300/80 animate-pulse" />
+        </div>
+        
+        <h3 className="text-xl font-semibold text-white mb-2">
+          AI Magic in Progress! ✨
+        </h3>
+        
+        <p className="text-white/60 mb-6 text-sm leading-relaxed">
+          Our AI is diving deep into your contract, uncovering insights and potential issues. Just a moment while we work our magic...
+        </p>
+
+        {/* Progress Steps com mais espaçamento */}
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Analyzing document structure</span>
+            <Icons.check className="w-4 h-4 text-green-300/80" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Identifying key clauses</span>
+            <Icons.check className="w-4 h-4 text-green-300/80" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Running legal analysis</span>
+            <Icons.spinner className="w-4 h-4 animate-spin text-blue-300/80" />
+          </div>
+        </div>
+
+        {/* Fun Facts Box mais suave */}
+        <div className="bg-indigo-900/20 rounded-lg p-4 text-sm text-white/50 mb-6">
+          <p className="font-medium text-white/70 mb-1">Did you know? 🤓</p>
+          <p>Our AI reads contracts faster than a lawyer on espresso! It analyzes hundreds of legal patterns in seconds.</p>
+        </div>
+
+        {/* Progress Bar mais fino e suave */}
+        <div>
+          <Progress 
+            value={75} 
+            className="h-1.5 bg-white/5"
+          />
+          <p className="text-white/40 text-xs mt-2">Almost there...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+Principais correções:
+1. Reduzido o tamanho dos ícones e ajustado suas opacidades
+2. Aumentado o espaçamento entre os elementos
+3. Suavizado as cores e opacidades
+4. Reduzido a altura da barra de progresso
+5. Ajustado os tamanhos de fonte
+6. Suavizado o box de "Did you know?"
+7. Ajustado os paddings e margins para melhor espaçamento
+
+Agora deve estar mais próximo do design da imagem e visualmente mais agradável. Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+Ele funcionou e ficou bonito, mas parece que tem uma div em cima dele impossibilitando ele ficar evidente.
+
+fixed inset-0 bg-indigo-950/90 backdrop-blur-sm flex items-center justify-center z-50
+
+Coloquei uma flecha na imagem para você ver e a classe do box que ficou por cima. Eu não entendi se é algo por cima ou se o box dele ficou pequeno e deveria ser maior, mas veja como tem uma borda branca em cima.
+
+---
+
+_**Assistant**_
+
+
+
+Ah, agora entendi! O problema é que o box está com uma borda branca por causa do `rounded-xl` e o fundo não está cobrindo completamente. Vamos ajustar o componente para ficar mais evidente e sem essas bordas:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+{migrationStatus === 'analyzing' && (
+  <div className="fixed inset-0 bg-indigo-950/90 backdrop-blur-sm flex items-center justify-center z-[100]">
+    <div className="relative bg-[#1e1b4b] rounded-xl p-6 max-w-md w-full mx-6 shadow-2xl">
+      <div className="text-center">
+        {/* Ícone menor e mais suave */}
+        <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+          <Sparkles className="w-6 h-6 text-blue-300/80 animate-pulse" />
+        </div>
+        
+        <h3 className="text-xl font-semibold text-white mb-2">
+          AI Magic in Progress! ✨
+        </h3>
+        
+        <p className="text-white/60 mb-6 text-sm leading-relaxed">
+          Our AI is diving deep into your contract, uncovering insights and potential issues. Just a moment while we work our magic...
+        </p>
+
+        {/* Progress Steps com mais espaçamento */}
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Analyzing document structure</span>
+            <Icons.check className="w-4 h-4 text-green-300/80" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Identifying key clauses</span>
+            <Icons.check className="w-4 h-4 text-green-300/80" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Running legal analysis</span>
+            <Icons.spinner className="w-4 h-4 animate-spin text-blue-300/80" />
+          </div>
+        </div>
+
+        {/* Fun Facts Box mais suave */}
+        <div className="bg-indigo-900/20 rounded-lg p-4 text-sm text-white/50 mb-6">
+          <p className="font-medium text-white/70 mb-1">Did you know? 🤓</p>
+          <p>Our AI reads contracts faster than a lawyer on espresso! It analyzes hundreds of legal patterns in seconds.</p>
+        </div>
+
+        {/* Progress Bar mais fino e suave */}
+        <div>
+          <Progress 
+            value={75} 
+            className="h-1.5 bg-white/5"
+          />
+          <p className="text-white/40 text-xs mt-2">Almost there...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+Principais mudanças:
+1. Aumentado o z-index para `z-[100]` para garantir que fique acima de tudo
+2. Trocado o background para uma cor sólida `bg-[#1e1b4b]` em vez de opacidade
+3. Adicionado `shadow-2xl` para dar mais destaque ao box
+4. Removido o `backdrop-blur-sm` do box interno
+5. Adicionado `relative` ao box para garantir o posicionamento correto
+
+Isso deve resolver o problema da borda branca e fazer o modal ficar mais evidente na tela. Me avise se ainda precisar de ajustes!
+
+---
+
+_**User**_
+
+ficou ótimo!
+
+Eu descobri o problema, ele está no Dialog geral, vamos manter esse box de progresso e migration em full no dialog para que ele preencha o espaço todo igual do form register, isso vai resolver nosso problema.
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Ah, excelente observação! Vamos ajustar o box de progresso para preencher todo o espaço do Dialog, mantendo a consistência com o formulário de registro:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+{migrationStatus === 'analyzing' ? (
+  // Box de progresso preenchendo todo o DialogContent
+  <DialogContent className="sm:max-w-[425px]">
+    <div className="relative bg-[#1e1b4b] -m-6 p-6">
+      <div className="text-center">
+        <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+          <Sparkles className="w-6 h-6 text-blue-300/80 animate-pulse" />
+        </div>
+        
+        <h3 className="text-xl font-semibold text-white mb-2">
+          AI Magic in Progress! ✨
+        </h3>
+        
+        <p className="text-white/60 mb-6 text-sm leading-relaxed">
+          Our AI is diving deep into your contract, uncovering insights and potential issues. Just a moment while we work our magic...
+        </p>
+
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Analyzing document structure</span>
+            <Icons.check className="w-4 h-4 text-green-300/80" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Identifying key clauses</span>
+            <Icons.check className="w-4 h-4 text-green-300/80" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Running legal analysis</span>
+            <Icons.spinner className="w-4 h-4 animate-spin text-blue-300/80" />
+          </div>
+        </div>
+
+        <div className="bg-indigo-900/20 rounded-lg p-4 text-sm text-white/50 mb-6">
+          <p className="font-medium text-white/70 mb-1">Did you know? 🤓</p>
+          <p>Our AI reads contracts faster than a lawyer on espresso! It analyzes hundreds of legal patterns in seconds.</p>
+        </div>
+
+        <div>
+          <Progress 
+            value={75} 
+            className="h-1.5 bg-white/5"
+          />
+          <p className="text-white/40 text-xs mt-2">Almost there...</p>
+        </div>
+      </div>
+    </div>
+  </DialogContent>
+) : (
+  // Conteúdo original do form
+  <DialogContent className="sm:max-w-[425px]">
+    {/* ... resto do conteúdo do form ... */}
+  </DialogContent>
+)}
+```
+
+
+Principais mudanças:
+1. Movido o conteúdo do progresso para dentro do `DialogContent`
+2. Usado margin negativa (`-m-6`) para cobrir todo o padding do DialogContent
+3. Mantido a mesma largura máxima do form (`sm:max-w-[425px]`)
+4. Removido o overlay fixo já que o Dialog já fornece isso
+5. Mantido todo o estilo e conteúdo do progresso
+
+Agora o box de progresso deve se integrar perfeitamente com o Dialog e não ter mais aquele problema de borda. Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+Unhandled Runtime Error
+Error: Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+Check the render method of `PreviewRegisterDialog`.
+
+Estive com esse erro, lembre-se que temos o progress em @progress.tsx 
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Ah sim! Vamos ajustar a importação do Progress no `PreviewRegisterDialog.tsx`. O erro está ocorrendo porque precisamos usar o componente Progress que já existe:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Icons } from "@/components/ui/icons";
+import { Progress } from "@/components/ui/progress"; // Importação correta do Progress existente
+import { signIn } from "next-auth/react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Separator } from "@/components/ui/separator";
+import { GoogleIcon } from "../ui/google-icon";
+import { Sparkles } from "lucide-react";
+
+// ... resto do código permanece igual ...
+```
+
+
+O componente Progress que já existe em `@/components/ui/progress` tem a mesma funcionalidade que precisamos. Apenas certifique-se de que a importação está correta e o caminho está apontando para o arquivo certo.
+
+Me avise se o erro persistir!
+
+---
+
+_**User**_
+
+e quanto a este erro? 
+
+Unhandled Runtime Error
+Error: Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+Check the render method of `PreviewRegisterDialog`.
+
+
+---
+
+_**Assistant**_
+
+
+
+O erro parece estar relacionado ao `Icons.check` e `Icons.spinner`. Vamos verificar se estamos importando e usando os ícones corretamente. Podemos usar os ícones diretamente do `lucide-react`:
+
+```typescript:src/components/auth/PreviewRegisterDialog.tsx
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { signIn } from "next-auth/react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Separator } from "@/components/ui/separator";
+import { GoogleIcon } from "../ui/google-icon";
+import { Sparkles, CheckIcon, Loader } from "lucide-react"; // Importando ícones do lucide-react
+
+// ... resto do código ...
+
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Analyzing document structure</span>
+            <CheckIcon className="w-4 h-4 text-green-300/80" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Identifying key clauses</span>
+            <CheckIcon className="w-4 h-4 text-green-300/80" />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">Running legal analysis</span>
+            <Loader className="w-4 h-4 animate-spin text-blue-300/80" />
+          </div>
+        </div>
+
+// ... resto do código ...
+```
+
+Principais mudanças:
+1. Removido o uso de `Icons.check` e `Icons.spinner`
+2. Importado `CheckIcon` e `Loader` diretamente do `lucide-react`
+3. Usado os componentes de ícone diretamente
+
+Isso deve resolver o erro de componente indefinido. Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+Agora vamos atualizar o @NewContractContent.tsx .
+
+Atualmente temos um CTA para "Generate new contract only $19" Vamos alterar essa função para ser GRÁTIS e ao clicar no botão vamos Abrir uma tela com TODAS AS ISSUES E NEW CLAUSES listadas no mesmo estilo de design do NewContractContent.
+
+Podemos usar a rota "revision" já criada para essa função.
+
+---
+
+_**Assistant**_
+
+Entendi! Vamos atualizar o `NewContractContent.tsx` para ter um CTA gratuito e mostrar todas as issues e new clauses em uma nova tela usando a rota "revision".
+
+```typescript:src/components/contracts/NewContractContent.tsx
+// ... imports existentes ...
+import { useRouter } from 'next/navigation';
+
+export function NewContractContent({
+  contract,
+  selectedIssue,
+  onIssueClick,
+  isFirstIssue,
+  onUpgrade,
+  onNext,
+  onClose
+}: NewContractContentProps) {
+  const [activeTab, setActiveTab] = useState<'issues' | 'suggested'>('issues');
+  const [filteredType, setFilteredType] = useState<IssueType | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const [localSelectedIssue, setLocalSelectedIssue] = useState<ContractIssue | null>(selectedIssue);
+  const router = useRouter();
+
+  // ... outros estados e efeitos ...
+
+  const handleGenerateRevision = async () => {
+    if (!contract?.id) return;
+    router.push(`/contracts/${contract.id}/revision`);
+  };
+
+  return (
+    <div className="flex h-full">
+      {/* Container do PDF */}
+      <div className="flex-1 relative h-full">
+        {/* ... código existente do PDF viewer ... */}
+      </div>
+
+      {/* Barra lateral */}
+      <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
+        <div className="p-4 space-y-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            {/* ... código existente das tabs ... */}
+          </div>
+
+          {/* Conteúdo das tabs */}
+          {activeTab === 'issues' ? (
+            <div className="space-y-6">
+              {/* Novo CTA Gratuito */}
+              <div className="bg-gradient-to-r from-blue-500/10 to-blue-500/5 rounded-lg p-6 border border-blue-500/20">
+                <h3 className="text-xl font-semibold text-blue-600 mb-3">
+                  See All Contract Issues & Suggestions
+                </h3>
+                <div className="space-y-2 text-sm text-gray-600 mb-4">
+                  <div className="flex items-center gap-2">
+                    <CheckIcon className="w-4 h-4 text-blue-500" />
+                    <p>Complete Analysis of Your Contract</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckIcon className="w-4 h-4 text-blue-500" />
+                    <p>All Issues and Improvements Listed</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckIcon className="w-4 h-4 text-blue-500" />
+                    <p>Suggested New Clauses</p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleGenerateRevision}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                >
+                  View Complete Analysis
+                </Button>
+              </div>
+
+              <IssuesSummary 
+                issues={issues || []}
+                filteredType={filteredType}
+                setFilteredType={setFilteredType}
+              />
+              
+              {/* ... resto do código das issues ... */}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* ... código existente das suggested clauses ... */}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Removido o CTA pago de $19
+2. Adicionado novo CTA gratuito com visual mais amigável
+3. Atualizado as cores para um esquema azul mais suave
+4. Adicionado função para redirecionar para a página de revisão
+5. Mantido a estrutura existente de issues e clauses
+6. Atualizado o texto para refletir a nova funcionalidade gratuita
+
+O botão agora redirecionará para a página de revisão onde todas as issues e new clauses serão mostradas no mesmo estilo de design. Me avise se precisar de ajustes ou se quiser que eu mostre também como ajustar a página de revisão!
+
+---
+
+_**User**_
+
+ótimo!
+
+Agora vamos trabalhar na implementação do revision seguindo o mesmo estilo de tela do @NewContractContent.tsx 
+
+---
+
+_**Assistant**_
+
+
+
+Vou criar o componente `ContractRevision.tsx` seguindo o mesmo estilo do `NewContractContent.tsx`, mas mostrando todas as issues e clauses:
+
+```typescript:src/components/contracts/ContractRevision.tsx
+"use client";
+
+import { useState, useEffect, useMemo } from 'react';
+import { Contract, ContractIssue, IssueType, SuggestedClause } from "@/types/contract";
+import { PDFViewer } from "./PDFViewer";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, AlertCircle, Lightbulb, Plus, FileText, CheckIcon, MessageSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
+
+interface ContractRevisionProps {
+  contract?: Contract;
+}
+
+export function ContractRevision({ contract }: ContractRevisionProps) {
+  const [activeTab, setActiveTab] = useState<'issues' | 'suggested'>('issues');
+  const [filteredType, setFilteredType] = useState<IssueType | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<ContractIssue | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const router = useRouter();
+
+  // Processar issues
+  const issues = useMemo(() => {
+    if (!contract) return [];
+    try {
+      return Array.isArray(contract.issues) 
+        ? contract.issues 
+        : JSON.parse(contract.issues || '[]');
+    } catch (e) {
+      console.error('Error processing issues:', e);
+      return [];
+    }
+  }, [contract]);
+
+  // Processar suggested clauses
+  const suggestedClauses = useMemo(() => {
+    if (!contract) return [];
+    try {
+      return Array.isArray(contract.suggestedClauses) 
+        ? contract.suggestedClauses 
+        : JSON.parse(contract.suggestedClauses || '[]');
+    } catch (e) {
+      console.error('Error processing suggested clauses:', e);
+      return [];
+    }
+  }, [contract]);
+
+  // Garantir que temos uma URL válida
+  const pdfUrl = useMemo(() => {
+    if (!contract?.fileUrl) return '';
+    try {
+      return new URL(contract.fileUrl).toString();
+    } catch (error) {
+      console.error('Invalid PDF URL:', error);
+      return '';
+    }
+  }, [contract?.fileUrl]);
+
+  return (
+    <div className="flex h-full">
+      {/* Container do PDF */}
+      <div className="flex-1 relative h-full">
+        <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm rounded-lg p-3 mb-4">
+          <FileText className="w-4 h-4 text-gray-500" />
+          <div className="flex-1 text-sm text-gray-600">
+            {contract?.fileName || 'Untitled'} • {contract?.fileType || 'Unknown'} • {contract?.metadata?.pageCount || '-'} pages
+          </div>
+        </div>
+        <PDFViewer
+          url={pdfUrl}
+          selectedIssue={selectedIssue}
+          onIssueClick={setSelectedIssue}
+          zoom={zoom}
+          contractInfo={contract}
+          onFilterByType={setFilteredType}
+        />
+      </div>
+
+      {/* Barra lateral */}
+      <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
+        <div className="p-4 space-y-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="flex -mb-px">
+              <button
+                onClick={() => setActiveTab('issues')}
+                className={cn(
+                  "py-2 px-4 text-sm font-medium border-b-2",
+                  activeTab === 'issues'
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                )}
+              >
+                All Issues ({issues?.length || 0})
+              </button>
+              <button
+                onClick={() => setActiveTab('suggested')}
+                className={cn(
+                  "py-2 px-4 text-sm font-medium border-b-2",
+                  activeTab === 'suggested'
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                )}
+              >
+                Suggested Clauses ({suggestedClauses?.length || 0})
+              </button>
+            </nav>
+          </div>
+
+          {/* Conteúdo */}
+          {activeTab === 'issues' ? (
+            <div className="space-y-6">
+              {/* Issues Summary */}
+              <div className="space-y-2">
+                <button
+                  onClick={() => setFilteredType(filteredType === 'critical' ? null : 'critical')}
+                  className={cn(
+                    "flex items-center justify-between w-full p-2 rounded",
+                    filteredType === 'critical' ? "bg-red-50" : "hover:bg-gray-50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                    <span>Critical Issues</span>
+                  </div>
+                  <Badge variant="destructive">
+                    {issues.filter(i => i.type === 'critical').length}
+                  </Badge>
+                </button>
+
+                <button
+                  onClick={() => setFilteredType(filteredType === 'warning' ? null : 'warning')}
+                  className={cn(
+                    "flex items-center justify-between w-full p-2 rounded",
+                    filteredType === 'warning' ? "bg-yellow-50" : "hover:bg-gray-50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-yellow-500" />
+                    <span>Warnings</span>
+                  </div>
+                  <Badge variant="secondary">
+                    {issues.filter(i => i.type === 'warning').length}
+                  </Badge>
+                </button>
+
+                <button
+                  onClick={() => setFilteredType(filteredType === 'improvement' ? null : 'improvement')}
+                  className={cn(
+                    "flex items-center justify-between w-full p-2 rounded",
+                    filteredType === 'improvement' ? "bg-green-50" : "hover:bg-gray-50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-green-500" />
+                    <span>Improvements</span>
+                  </div>
+                  <Badge variant="outline">
+                    {issues.filter(i => i.type === 'improvement').length}
+                  </Badge>
+                </button>
+              </div>
+
+              {/* Lista de Issues */}
+              <div className="space-y-4">
+                {issues
+                  .filter(issue => !filteredType || issue.type === filteredType)
+                  .map((issue, index) => (
+                    <div
+                      key={issue.id}
+                      className={cn(
+                        "p-4 rounded-lg cursor-pointer transition-all",
+                        selectedIssue?.id === issue.id ? "ring-2 ring-primary" : "hover:bg-gray-50",
+                        {
+                          'bg-red-50': issue.type === 'critical',
+                          'bg-yellow-50': issue.type === 'warning',
+                          'bg-green-50': issue.type === 'improvement'
+                        }
+                      )}
+                      onClick={() => setSelectedIssue(issue)}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        {issue.type === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                        {issue.type === 'warning' && <AlertCircle className="w-4 h-4 text-yellow-500" />}
+                        {issue.type === 'improvement' && <Lightbulb className="w-4 h-4 text-green-500" />}
+                        <span className="font-medium">Issue #{index + 1}</span>
+                      </div>
+                      
+                      <div className="text-sm space-y-2">
+                        <div className="text-gray-600">
+                          <p className="font-medium mb-1">Selected Text:</p>
+                          <p className="line-clamp-2 italic">{issue.originalText}</p>
+                        </div>
+                        
+                        <div className="text-gray-600">
+                          <p className="font-medium mb-1">AI Analysis:</p>
+                          <p className="line-clamp-2">{issue.explanation}</p>
+                        </div>
+
+                        <div className="text-gray-600">
+                          <p className="font-medium mb-1">Suggested Fix:</p>
+                          <p className="line-clamp-2">{issue.newText}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {suggestedClauses.map((clause, index) => (
+                <div key={clause.id} className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Plus className="w-4 h-4 text-green-500" />
+                    <span className="font-medium">New Clause Suggestion #{index + 1}</span>
+                  </div>
+                  
+                  <div className="text-sm space-y-2">
+                    <p className="font-medium">{clause.title}</p>
+                    <p className="text-gray-600">{clause.explanation}</p>
+                    
+                    <div className="mt-2 p-2 bg-gray-50 rounded">
+                      <p className="text-gray-600">{clause.suggestedText}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+E agora vamos criar a página que vai usar este componente:
+
+```typescript:src/app/contracts/[id]/revision/page.tsx
+"use client";
+
+import { useEffect, useState } from 'react';
+import { ContractRevision } from '@/components/contracts/ContractRevision';
+import { Contract } from '@/types/contract';
+
+export default function RevisionPage({ params }: { params: { id: string } }) {
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContract = async () => {
+      try {
+        const response = await fetch(`/api/contracts/${params.id}`);
+        if (!response.ok) throw new Error('Failed to fetch contract');
+        const data = await response.json();
+        setContract(data);
+      } catch (error) {
+        console.error('Error fetching contract:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContract();
+  }, [params.id]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!contract) {
+    return <div>Contract not found</div>;
+  }
+
+  return (
+    <div className="h-screen">
+      <ContractRevision contract={contract} />
+    </div>
+  );
+}
+```
+
+Principais características:
+1. Mantido o mesmo estilo visual do NewContractContent
+2. Mostradas todas as issues e clauses sem limitações
+3. Mantida a funcionalidade de filtro por tipo
+4. Adicionada seleção de issue para destacar no PDF
+5. Interface mais limpa e organizada
+6. Barra lateral mais larga (w-96) para melhor visualização do conteúdo completo
+7. Melhorias na exibição das informações
+
+Me avise se precisar de ajustes ou se quiser que eu modifique algo no layout!
+
+---
+
+_**User**_
+
+Faça o texto de cada issue e analise aparecer completo sem os "..."
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Vou remover o `line-clamp-2` para que o texto apareça completo:
+
+```typescript:src/components/contracts/ContractRevision.tsx
+                      <div className="flex items-center gap-2 mb-2">
+                        {issue.type === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                        {issue.type === 'warning' && <AlertCircle className="w-4 h-4 text-yellow-500" />}
+                        {issue.type === 'improvement' && <Lightbulb className="w-4 h-4 text-green-500" />}
+                        <span className="font-medium">Issue #{index + 1}</span>
+                      </div>
+                      
+                      <div className="text-sm space-y-2">
+                        <div className="text-gray-600">
+                          <p className="font-medium mb-1">Selected Text:</p>
+                          <p className="italic whitespace-pre-wrap">{issue.originalText}</p>
+                        </div>
+                        
+                        <div className="text-gray-600">
+                          <p className="font-medium mb-1">AI Analysis:</p>
+                          <p className="whitespace-pre-wrap">{issue.explanation}</p>
+                        </div>
+
+                        <div className="text-gray-600">
+                          <p className="font-medium mb-1">Suggested Fix:</p>
+                          <p className="whitespace-pre-wrap">{issue.newText}</p>
+                        </div>
+                      </div>
+```
+
+
+Mudanças feitas:
+1. Removido `line-clamp-2` de todos os parágrafos
+2. Adicionado `whitespace-pre-wrap` para preservar quebras de linha e espaços, mantendo o texto formatado corretamente
+
+Agora o texto aparecerá completo e bem formatado. Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+ótimo!
+
+Agora Remova as abas e deixe todos em uma única lista corrida as issues primeiro e depois as Suggested Clauses na listagem
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Vou remover as abas e organizar o conteúdo em uma única lista contínua:
+
+```typescript:src/components/contracts/ContractRevision.tsx
+      {/* Barra lateral */}
+      <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
+        <div className="p-4 space-y-6">
+          {/* Issues Summary */}
+          <div className="space-y-2">
+            <button
+              onClick={() => setFilteredType(filteredType === 'critical' ? null : 'critical')}
+              className={cn(
+                "flex items-center justify-between w-full p-2 rounded",
+                filteredType === 'critical' ? "bg-red-50" : "hover:bg-gray-50"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                <span>Critical Issues</span>
+              </div>
+              <Badge variant="destructive">
+                {issues.filter(i => i.type === 'critical').length}
+              </Badge>
+            </button>
+
+            <button
+              onClick={() => setFilteredType(filteredType === 'warning' ? null : 'warning')}
+              className={cn(
+                "flex items-center justify-between w-full p-2 rounded",
+                filteredType === 'warning' ? "bg-yellow-50" : "hover:bg-gray-50"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-500" />
+                <span>Warnings</span>
+              </div>
+              <Badge variant="secondary">
+                {issues.filter(i => i.type === 'warning').length}
+              </Badge>
+            </button>
+
+            <button
+              onClick={() => setFilteredType(filteredType === 'improvement' ? null : 'improvement')}
+              className={cn(
+                "flex items-center justify-between w-full p-2 rounded",
+                filteredType === 'improvement' ? "bg-green-50" : "hover:bg-gray-50"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-green-500" />
+                <span>Improvements</span>
+              </div>
+              <Badge variant="outline">
+                {issues.filter(i => i.type === 'improvement').length}
+              </Badge>
+            </button>
+          </div>
+
+          {/* Lista de Issues */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg text-gray-900">Contract Issues ({issues.length})</h3>
+            {issues
+              .filter(issue => !filteredType || issue.type === filteredType)
+              .map((issue, index) => (
+                <div
+                  key={issue.id}
+                  className={cn(
+                    "p-4 rounded-lg cursor-pointer transition-all",
+                    selectedIssue?.id === issue.id ? "ring-2 ring-primary" : "hover:bg-gray-50",
+                    {
+                      'bg-red-50': issue.type === 'critical',
+                      'bg-yellow-50': issue.type === 'warning',
+                      'bg-green-50': issue.type === 'improvement'
+                    }
+                  )}
+                  onClick={() => setSelectedIssue(issue)}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    {issue.type === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                    {issue.type === 'warning' && <AlertCircle className="w-4 h-4 text-yellow-500" />}
+                    {issue.type === 'improvement' && <Lightbulb className="w-4 h-4 text-green-500" />}
+                    <span className="font-medium">Issue #{index + 1}</span>
+                  </div>
+                  
+                  <div className="text-sm space-y-2">
+                    <div className="text-gray-600">
+                      <p className="font-medium mb-1">Selected Text:</p>
+                      <p className="italic whitespace-pre-wrap">{issue.originalText}</p>
+                    </div>
+                    
+                    <div className="text-gray-600">
+                      <p className="font-medium mb-1">AI Analysis:</p>
+                      <p className="whitespace-pre-wrap">{issue.explanation}</p>
+                    </div>
+
+                    <div className="text-gray-600">
+                      <p className="font-medium mb-1">Suggested Fix:</p>
+                      <p className="whitespace-pre-wrap">{issue.newText}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          {/* Lista de Suggested Clauses */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg text-gray-900">Suggested New Clauses ({suggestedClauses.length})</h3>
+            {suggestedClauses.map((clause, index) => (
+              <div key={clause.id} className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Plus className="w-4 h-4 text-green-500" />
+                  <span className="font-medium">New Clause Suggestion #{index + 1}</span>
+                </div>
+                
+                <div className="text-sm space-y-2">
+                  <p className="font-medium">{clause.title}</p>
+                  <p className="text-gray-600 whitespace-pre-wrap">{clause.explanation}</p>
+                  
+                  <div className="mt-2 p-2 bg-gray-50 rounded">
+                    <p className="text-gray-600 whitespace-pre-wrap">{clause.suggestedText}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+```
+
+
+
+Mudanças realizadas:
+1. Removido o sistema de abas
+2. Adicionado títulos para separar as seções
+3. Mantido o filtro de issues no topo
+4. Organizado as issues primeiro, seguidas pelas suggested clauses
+5. Mantido o estilo e funcionalidades de cada item
+6. Adicionado contadores em cada seção
+7. Mantido o `whitespace-pre-wrap` em todos os textos
+
+Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+na barra lateral adicione um contador grande de Issues e de New Clauses no inicio
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+Vou adicionar um contador grande no início da barra lateral:
+
+```typescript:src/components/contracts/ContractRevision.tsx
+      {/* Barra lateral */}
+      <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
+        <div className="p-4 space-y-6">
+          {/* Contadores Grandes */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-blue-50 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-1">
+                {issues.length}
+              </div>
+              <div className="text-sm text-blue-600/80 font-medium">
+                Total Issues
+              </div>
+            </div>
+            <div className="bg-green-50 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-green-600 mb-1">
+                {suggestedClauses.length}
+              </div>
+              <div className="text-sm text-green-600/80 font-medium">
+                New Clauses
+              </div>
+            </div>
+          </div>
+
+          {/* Issues Summary */}
+          <div className="space-y-2">
+            {/* ... resto do código existente ... */}
+```
+
+
+
+Adicionei dois cards grandes no topo da barra lateral com:
+1. Contador de Issues em azul
+2. Contador de New Clauses em verde
+3. Números grandes e destacados
+4. Rótulos explicativos abaixo
+5. Cores suaves e arredondamento para combinar com o design existente
+
+Me avise se quiser ajustar as cores, tamanhos ou o estilo geral!
+
+---
+
+_**User**_
+
+troque para vermelho
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+Vou trocar as cores para vermelho:
+
+```typescript:src/components/contracts/ContractRevision.tsx
+      {/* Barra lateral */}
+      <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
+        <div className="p-4 space-y-6">
+          {/* Contadores Grandes */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-red-50 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-red-600 mb-1">
+                {issues.length}
+              </div>
+              <div className="text-sm text-red-600/80 font-medium">
+                Total Issues
+              </div>
+            </div>
+            <div className="bg-red-50 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-red-600 mb-1">
+                {suggestedClauses.length}
+              </div>
+              <div className="text-sm text-red-600/80 font-medium">
+                New Clauses
+              </div>
+            </div>
+          </div>
+
+          {/* Issues Summary */}
+          <div className="space-y-2">
+            {/* ... resto do código existente ... */}
+```
+
+
+
+
+Mudanças:
+1. Trocado `blue-50` para `red-50`
+2. Trocado `blue-600` para `red-600`
+3. Trocado `green-50` para `red-50`
+4. Trocado `green-600` para `red-600`
+5. Mantido a mesma opacidade nos textos secundários
+
+Agora ambos os contadores estão em tons de vermelho. Me avise se quiser ajustar a tonalidade ou fazer outras mudanças!
+
+---
+
+_**User**_
+
+Adicione um botão de voltar na tela para ir para a tela de /contracts/[id]
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Vou adicionar um botão de voltar no topo da tela:
+
+```typescript:src/components/contracts/ContractRevision.tsx
+import { ArrowLeft } from "lucide-react"; // Adicione esta importação
+
+export function ContractRevision({ contract }: ContractRevisionProps) {
+  // ... estados existentes ...
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (contract?.id) {
+      router.push(`/contracts/${contract.id}`);
+    }
+  };
+
+  return (
+    <div className="flex h-full">
+      {/* Container do PDF */}
+      <div className="flex-1 relative h-full">
+        {/* Botão Voltar */}
+        <div className="flex items-center gap-2 mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Contract
+          </Button>
+        </div>
+
+        {/* Info do arquivo */}
+        <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm rounded-lg p-3 mb-4">
+          <FileText className="w-4 h-4 text-gray-500" />
+          <div className="flex-1 text-sm text-gray-600">
+            {contract?.fileName || 'Untitled'} • {contract?.fileType || 'Unknown'} • {contract?.metadata?.pageCount || '-'} pages
+          </div>
+        </div>
+
+        <PDFViewer
+          // ... props existentes ...
+        />
+      </div>
+
+      {/* ... resto do código existente ... */}
+    </div>
+  );
+}
+```
+
+
+
+
+
+Mudanças:
+1. Adicionado botão de voltar no topo esquerdo
+2. Usado o componente Button do shadcn/ui com variante "ghost"
+3. Adicionado ícone de seta para esquerda
+4. Implementado função de navegação usando o router
+5. Mantido o estilo consistente com o resto da interface
+
+Me avise se quiser ajustar o posicionamento, estilo ou texto do botão!
+
+---
+
+_**User**_
+
+Vamos atualizar a seção de upload de contratos da dashboard, por favor utilize os componentes da página de /contracts/upload na secao que hoje está o "Upload new contract"
+
+---
+
+_**Assistant**_
+
+
+
+Vou atualizar a seção de upload na dashboard para usar os mesmos componentes da página de upload. Primeiro, me mostre o código da página `/contracts/upload` para que eu possa reutilizar os componentes corretamente na dashboard.
+
+Você pode compartilhar o código da página de upload para que eu possa fazer a atualização mantendo a consistência?
+
+---
+
+_**User**_
+
+@page.tsx aqui esta a pagina
+
+---
+
+_**Assistant**_
+
+
+
+Agora vou atualizar a seção de upload na dashboard para usar o `UploadZone`:
+
+```typescript:src/app/(protected)/dashboard/page.tsx
+'use client';
+
+import { useContractStore } from '@/lib/store/contract-store';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Upload, FileText, Clock, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import { useState, useEffect } from 'react';
+import { UploadZone } from '@/components/contracts/upload/UploadZone';
+
+// ... outros imports e interfaces ...
+
+export default function DashboardPage() {
+  // ... estados e funções existentes ...
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-[#5000f7] to-[#2563EB] rounded-lg p-6 text-white mb-8">
+        <h1 className="text-3xl font-bold mb-2">Welcome back!</h1>
+        <p className="opacity-90">Upload a new contract or continue working on your recent documents.</p>
+      </div>
+
+      {/* Search and Actions */}
+      <div className="flex justify-between items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input 
+            placeholder="Search contracts..." 
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Button 
+          onClick={() => router.push('/contracts/upload')}
+          className="bg-[#2563EB] hover:bg-[#1E40AF] gap-2"
+        >
+          <Upload className="h-4 w-4" />
+          Upload Contract
+        </Button>
+      </div>
+
+      {/* Nova seção de Upload usando UploadZone */}
+      <div className="bg-gradient-to-b from-indigo-950 to-indigo-900 rounded-2xl shadow-xl border border-white/20 p-8">
+        <UploadZone />
+      </div>
+
+      {/* Recent Activity */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Recent Contracts</CardTitle>
+            <Button variant="ghost" onClick={() => router.push('/contracts')}>
+              View all
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* ... resto do código dos contratos recentes ... */}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Importado o componente `UploadZone`
+2. Removido o antigo card de upload
+3. Adicionado a nova seção de upload com o mesmo estilo da página de upload
+4. Mantido o gradiente e bordas consistentes com o design original
+5. Mantido o resto da funcionalidade da dashboard intacta
+
+Me avise se precisar de ajustes no estilo ou na integração!
+
+---
+
+_**User**_
+
+melhore essa seção em termos de UI e deixe atrante como um saas moderno para o usuário entender o sistema rapidamente, sentir vontade de fazer a analise dos contratos de graça
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+Vou melhorar a seção de boas-vindas para ser mais atraente e moderna:
+
+```typescript:src/app/(protected)/dashboard/page.tsx
+      {/* Welcome Section - Modern SaaS Style */}
+      <div className="bg-gradient-to-r from-indigo-950 to-indigo-900 rounded-2xl p-8 text-white mb-8 border border-white/10 shadow-xl relative overflow-hidden">
+        {/* Gradient Orb Background Effects */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+        
+        {/* Content */}
+        <div className="relative z-10 max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-sm font-medium mb-4">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            Free AI Contract Analysis
+          </div>
+          
+          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
+            Transform Your Legal Documents with AI
+          </h1>
+          
+          <p className="text-lg text-white/80 mb-6 leading-relaxed">
+            Get instant AI-powered insights on your contracts. Identify risks, 
+            optimize clauses, and ensure your agreements are secure - all for free.
+          </p>
+          
+          <div className="flex gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                ⚡️
+              </div>
+              <span className="text-white/70">Instant Analysis</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                🔒
+              </div>
+              <span className="text-white/70">Risk Detection</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                ✨
+              </div>
+              <span className="text-white/70">Smart Suggestions</span>
+            </div>
+          </div>
+        </div>
+      </div>
+```
+
+
+
+
+
+Principais melhorias:
+1. Design mais moderno com gradientes suaves
+2. Badge destacando que é gratuito
+3. Efeitos de "orbs" no background para dar profundidade
+4. Título com gradiente de texto
+5. Ícones com features principais
+6. Melhor hierarquia visual
+7. Animação sutil no indicador "live"
+8. Bordas suaves com transparência
+9. Texto mais persuasivo e focado em benefícios
+
+O design agora está mais moderno e atraente, destacando os benefícios gratuitos do sistema. Me avise se quiser ajustar algo no estilo ou no conteúdo!
+
+---
+
+_**User**_
+
+por favor melhor o visual do loading desta página enquanto o PDF não abre, deixe com um visual bonito e meio placeholder para a tela que será aberta
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+Vou criar um loading state mais atraente e que dê uma prévia do layout que será carregado:
+
+```typescript:src/app/(protected)/contracts/[id]/revision/page.tsx
+"use client";
+
+import { useEffect, useState } from 'react';
+import { ContractRevision } from '@/components/contracts/ContractRevision';
+import { Contract } from '@/types/contract';
+import { Skeleton } from "@/components/ui/skeleton";
+import { FileText, AlertTriangle, AlertCircle, Lightbulb } from "lucide-react";
+
+export default function RevisionPage({ params }: { params: { id: string } }) {
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContract = async () => {
+      try {
+        const response = await fetch(`/api/contracts/${params.id}`);
+        if (!response.ok) throw new Error('Failed to fetch contract');
+        const data = await response.json();
+        setContract(data);
+      } catch (error) {
+        console.error('Error fetching contract:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContract();
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-white">
+        {/* PDF Area Loading */}
+        <div className="flex-1 p-4 space-y-4">
+          {/* File Info Skeleton */}
+          <div className="flex items-center gap-4 bg-gray-50 rounded-lg p-3 animate-pulse">
+            <FileText className="w-4 h-4 text-gray-300" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-48 bg-gray-200" />
+            </div>
+          </div>
+          
+          {/* PDF Viewer Skeleton */}
+          <div className="h-[calc(100vh-8rem)] bg-gray-50 rounded-lg flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <Skeleton className="w-16 h-16 rounded-full bg-gray-200 mx-auto" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-48 bg-gray-200 mx-auto" />
+                <Skeleton className="h-4 w-32 bg-gray-200 mx-auto" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Loading */}
+        <div className="w-96 border-l border-gray-100 p-4 space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-24 rounded-lg bg-red-50" />
+            <Skeleton className="h-24 rounded-lg bg-red-50" />
+          </div>
+
+          {/* Issues Summary Skeleton */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2 bg-red-50/50 rounded">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-200" />
+                <Skeleton className="h-4 w-24 bg-gray-200" />
+              </div>
+              <Skeleton className="h-5 w-8 rounded-full bg-gray-200" />
+            </div>
+            <div className="flex items-center justify-between p-2 bg-yellow-50/50 rounded">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-200" />
+                <Skeleton className="h-4 w-24 bg-gray-200" />
+              </div>
+              <Skeleton className="h-5 w-8 rounded-full bg-gray-200" />
+            </div>
+            <div className="flex items-center justify-between p-2 bg-green-50/50 rounded">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-green-200" />
+                <Skeleton className="h-4 w-24 bg-gray-200" />
+              </div>
+              <Skeleton className="h-5 w-8 rounded-full bg-gray-200" />
+            </div>
+          </div>
+
+          {/* Issues List Skeleton */}
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 rounded-lg border border-gray-100 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded-full bg-gray-200" />
+                  <Skeleton className="h-4 w-32 bg-gray-200" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full bg-gray-100" />
+                  <Skeleton className="h-3 w-5/6 bg-gray-100" />
+                  <Skeleton className="h-3 w-4/6 bg-gray-100" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!contract) {
+    return <div>Contract not found</div>;
+  }
+
+  return (
+    <div className="h-screen">
+      <ContractRevision contract={contract} />
+    </div>
+  );
+}
+```
+
+
+
+
+
+
+Principais características do loading state:
+1. Layout que reflete a estrutura real da página
+2. Skeletons com cores e formas que representam o conteúdo final
+3. Animação suave de pulse
+4. Área do PDF com placeholder centralizado
+5. Sidebar com:
+   - Cards de estatísticas
+   - Summary de issues com ícones
+   - Lista de issues com estrutura similar ao conteúdo real
+6. Cores suaves e consistentes com o design final
+7. Ícones em tons claros para indicar loading
+8. Bordas e espaçamentos mantendo o visual do layout final
+
+Me avise se quiser ajustar algo no estilo ou na estrutura do loading state!
+
+---
+
+_**User**_
+
+ficou ótimo!
+
+Faça o mesmo para o @page.tsx 
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+Vou melhorar o visual da página de contratos com um design mais moderno e atraente:
+
+```typescript:src/app/(protected)/contracts/page.tsx
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+import { ContractsList } from '@/components/contracts/ContractsList';
+import { redirect } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Upload, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Contract } from '@prisma/client';
+
+export default async function ContractsPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect('/auth/login');
+  }
+
+  const { user, contracts } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: { email: session.user.email }
+    });
+
+    const contracts = await tx.contract.findMany({
+      where: { userId: user?.id },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return { user, contracts };
+  });
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      {/* Header Section with Gradient */}
+      <div className="bg-gradient-to-r from-indigo-950 to-indigo-900 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+        
+        <div className="relative z-10 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Your Contracts</h1>
+            <p className="text-white/70">Manage and analyze your legal documents in one place</p>
+          </div>
+          <Link href="/contracts/upload">
+            <Button className="bg-white text-indigo-950 hover:bg-white/90">
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Contract
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Stats Overview - Modern Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Total Contracts</p>
+              <p className="text-2xl font-bold text-gray-900">{contracts.length}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center">
+              <Clock className="w-6 h-6 text-yellow-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Under Review</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {contracts.filter(c => c.status === 'under_review').length}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-green-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Approved</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {contracts.filter(c => c.status === 'approved').length}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Contratos */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <ContractsList contracts={contracts} />
+      </div>
+    </div>
+  );
+}
+```
+
+
+
+
+
+
+Principais melhorias:
+1. Header com gradiente moderno e efeitos de "orb"
+2. Cards de estatísticas com ícones e layout mais moderno
+3. Melhor hierarquia visual com espaçamentos e tipografia
+4. Cores mais vibrantes e consistentes
+5. Sombras suaves e bordas refinadas
+6. Botão de upload com contraste melhorado
+7. Container principal com padding para melhor responsividade
+8. Lista de contratos em um container com borda e sombra suave
+
+Me avise se quiser ajustar algo no estilo ou na estrutura!
+
+---
+
+_**User**_
+
+por favor revise o botão de Log out, as vezes ele não faz o signout completo. Ele desloga o usuário mas fica parado na dashboard sem nada
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Vou melhorar a implementação do logout para garantir que o usuário seja completamente deslogado e redirecionado corretamente:
+
+```typescript:src/components/layout/Header.tsx
+import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+
+// ... outros imports ...
+
+export function Header() {
+  const router = useRouter();
+  
+  const handleSignOut = async () => {
+    try {
+      // Chama o signOut com opções explícitas
+      await signOut({
+        redirect: false,
+        callbackUrl: '/auth/login'
+      });
+      
+      // Força o redirecionamento após o signOut
+      router.push('/auth/login');
+      router.refresh();
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Fallback: força redirecionamento mesmo em caso de erro
+      window.location.href = '/auth/login';
+    }
+  };
+
+  return (
+    // ... resto do código ...
+    <DropdownMenuItem 
+      className="text-red-600 cursor-pointer"
+      onClick={handleSignOut}
+    >
+      <LogOut className="mr-2 h-4 w-4" />
+      <span>Log out</span>
+    </DropdownMenuItem>
+    // ... resto do código ...
+  );
+}
+```
+
+
+
+
+
+Principais mudanças:
+1. Adicion
+
+---
+
 
 
 ---

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
 
   const navigationItems = [
@@ -53,6 +54,24 @@ export function Header() {
   const userInitials = session?.user?.name
     ? session.user.name.split(' ').map(n => n[0]).join('')
     : session?.user?.email?.[0].toUpperCase() || 'U';
+
+  const handleSignOut = async () => {
+    try {
+      // Chama o signOut com opções explícitas
+      await signOut({
+        redirect: false,
+        callbackUrl: '/auth/login'
+      });
+      
+      // Força o redirecionamento após o signOut
+      router.push('/auth/login');
+      router.refresh();
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Fallback: força redirecionamento mesmo em caso de erro
+      window.location.href = '/auth/login';
+    }
+  };
 
   return (
     <header className="bg-[#5000f7] border-b border-[#4000c6]">
@@ -148,8 +167,8 @@ export function Header() {
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
-                    className="text-red-600"
-                    onClick={() => signOut()}
+                    className="text-red-600 cursor-pointer"
+                    onClick={handleSignOut}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>

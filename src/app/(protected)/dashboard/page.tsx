@@ -7,6 +7,7 @@ import { Upload, FileText, Clock, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
+import { UploadZone } from '@/components/contracts/upload/UploadZone';
 import  prisma  from '@/lib/prisma';
 
 interface Contract {
@@ -44,12 +45,57 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-[#5000f7] to-[#2563EB] rounded-lg p-6 text-white mb-8">
-        <h1 className="text-3xl font-bold mb-2">Welcome back!</h1>
-        <p className="opacity-90">Upload a new contract or continue working on your recent documents.</p>
+      {/* Welcome Section - Modern SaaS Style */}
+      <div className="bg-gradient-to-r from-indigo-950 to-indigo-900 rounded-2xl p-8 text-white mb-8 border border-white/10 shadow-xl relative overflow-hidden">
+        {/* Gradient Orb Background Effects */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+        
+        {/* Content */}
+        <div className="relative z-10 max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-sm font-medium mb-4">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            Free AI Contract Analysis
+          </div>
+          
+          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
+            Transform Your Legal Documents with AI
+          </h1>
+          
+          <p className="text-lg text-white/80 mb-6 leading-relaxed">
+            Get instant AI-powered insights on your contracts. Identify risks, 
+            optimize clauses, and ensure your agreements are secure - all for free.
+          </p>
+          
+          <div className="flex gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                ⚡️
+              </div>
+              <span className="text-white/70">Instant Analysis</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                🔒
+              </div>
+              <span className="text-white/70">Risk Detection</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                ✨
+              </div>
+              <span className="text-white/70">Smart Suggestions</span>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Nova seção de Upload usando UploadZone */}
+      <div className="bg-gradient-to-b from-indigo-950 to-indigo-900 rounded-2xl shadow-xl border border-white/20 p-8">
+        <UploadZone />
+      </div>
+
+      
       {/* Search and Actions */}
       <div className="flex justify-between items-center gap-4">
         <div className="relative flex-1 max-w-md">
@@ -61,31 +107,7 @@ export default function DashboardPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button 
-          onClick={() => router.push('/contracts/upload')}
-          className="bg-[#2563EB] hover:bg-[#1E40AF] gap-2"
-        >
-          <Upload className="h-4 w-4" />
-          Upload Contract
-        </Button>
       </div>
-
-      {/* Quick Upload Zone */}
-      <Card className="border-2 border-dashed hover:border-[#2563EB] transition-colors cursor-pointer"
-            onClick={() => router.push('/contracts/upload')}>
-        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-          <Upload className="h-12 w-12 text-[#64748B] mb-4" />
-          <h2 className="text-lg font-semibold text-[#1E293B] mb-2">
-            Upload New Contract
-          </h2>
-          <p className="text-[#64748B] mb-4">
-            Drag and drop your contract here or click to browse
-          </p>
-          <Button className="bg-[#2563EB] hover:bg-[#1E40AF]">
-            Choose File
-          </Button>
-        </CardContent>
-      </Card>
 
       {/* Recent Activity */}
       <Card>

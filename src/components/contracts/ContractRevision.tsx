@@ -1,309 +1,246 @@
 "use client";
 
-import { useContractStore } from '@/lib/store/contract-store';
-import { Contract } from '@/types/contract';
-import { Highlight } from "@/types/contract";
-import { DocumentWrapper } from "../ui/document-wrapper";
-import { DocumentToolbar } from "./DocumentToolbar";
-import { useState, useRef, useEffect } from "react";
-import { Button } from "../ui/button";
-import { ArrowLeft, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, AwaitedReactNode, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from 'react';
+import { Contract, ContractIssue, IssueType, SuggestedClause } from "@/types/contract";
+import { PDFViewer } from "./PDFViewer";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, AlertCircle, Lightbulb, Plus, FileText, CheckIcon, MessageSquare, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
 
 interface ContractRevisionProps {
-  contract: Contract;
+  contract?: Contract;
 }
 
-export function ContractRevision({ contract: initialContract }: ContractRevisionProps) {
+export function ContractRevision({ contract }: ContractRevisionProps) {
+  const [activeTab, setActiveTab] = useState<'issues' | 'suggested'>('issues');
+  const [filteredType, setFilteredType] = useState<IssueType | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<ContractIssue | null>(null);
   const [zoom, setZoom] = useState(100);
-  const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Use the contract directly without loading state
-  const [contract, setContract] = useState(initialContract);
-
-  // Use the highlights array directly
-  const highlights = contract.highlights || [];
-  
-  const stats = {
-    critical: highlights.filter(h => h.type === 'critical').length,
-    warning: highlights.filter(h => h.type === 'warning').length,
-    improvement: highlights.filter(h => h.type === 'improvement').length,
-  };
-
-  // Single fetch with cleanup
-  useEffect(() => {
-    let isMounted = true;
-    let pollInterval: NodeJS.Timeout;
-
-    const fetchContract = async () => {
-      try {
-        const response = await fetch(`/api/contracts/${initialContract.id}`);
-        const data = await response.json();
-        if (data.contract && isMounted) {
-          setContract(data.contract);
-          
-          // Stop polling when contract is approved
-          if (data.contract.status === 'approved') {
-            clearInterval(pollInterval);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching contract:', error);
-      }
-    };
-
-    // Start polling immediately
-    pollInterval = setInterval(fetchContract, 1000); // Poll every second
-    fetchContract(); // Initial fetch
-
-    return () => {
-      isMounted = false;
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-    };
-  }, [initialContract.id]); // Remove contract.status dependency
-
-  useEffect(() => {
-    let isMounted = true;
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    const verifyAndUpdateStatus = async () => {
-      if (!isMounted || attempts >= maxAttempts) return;
-
-      try {
-        const response = await fetch(`/api/contracts/${initialContract.id}`);
-        const data = await response.json();
-        
-        if (data.contract) {
-          const parsedHighlights = typeof data.contract.highlights === 'string' 
-            ? JSON.parse(data.contract.highlights) 
-            : data.contract.highlights;
-          
-          const parsedChanges = typeof data.contract.changes === 'string'
-            ? JSON.parse(data.contract.changes)
-            : data.contract.changes;
-
-          // If we have the new content and arrays, update status to approved
-          if (data.contract.content && parsedHighlights.length > 0) {
-            await fetch(`/api/contracts/${initialContract.id}/status`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: 'approved' })
-            });
-          } else {
-            attempts++;
-            setTimeout(verifyAndUpdateStatus, 1000);
-          }
-        }
-      } catch (error) {
-        console.error('Error verifying contract:', error);
-        attempts++;
-        setTimeout(verifyAndUpdateStatus, 1000);
-      }
-    };
-
-    if (contract.status === 'under_review') {
-      verifyAndUpdateStatus();
+  // Processar issues
+  const issues = useMemo(() => {
+    if (!contract) return [];
+    try {
+      return Array.isArray(contract.issues) 
+        ? contract.issues 
+        : JSON.parse(contract.issues || '[]');
+    } catch (e) {
+      console.error('Error processing issues:', e);
+      return [];
     }
+  }, [contract]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [initialContract.id, contract.status]);
-
-  const renderHighlightedContent = () => {
-    const content = contract.content;
-    // Use the already parsed highlights array
-    const sortedHighlights = [...highlights].sort((a, b) => a.startIndex - b.startIndex);
-    const segments: { text: string; highlight?: Highlight }[] = [];
-    
-    let lastIndex = 0;
-    
-    sortedHighlights.forEach(highlight => {
-      if (lastIndex < highlight.startIndex) {
-        segments.push({ text: content.slice(lastIndex, highlight.startIndex) });
-      }
-      
-      segments.push({
-        text: content.slice(highlight.startIndex, highlight.endIndex),
-        highlight
-      });
-      
-      lastIndex = highlight.endIndex;
-    });
-    
-    if (lastIndex < content.length) {
-      segments.push({ text: content.slice(lastIndex) });
+  // Processar suggested clauses
+  const suggestedClauses = useMemo(() => {
+    if (!contract) return [];
+    try {
+      return Array.isArray(contract.suggestedClauses) 
+        ? contract.suggestedClauses 
+        : JSON.parse(contract.suggestedClauses || '[]');
+    } catch (e) {
+      console.error('Error processing suggested clauses:', e);
+      return [];
     }
+  }, [contract]);
 
-    return segments.map((segment, index) => {
-      if (!segment.highlight) {
-        return <span key={index}>{segment.text}</span>;
-      }
+  // Garantir que temos uma URL válida
+  const pdfUrl = useMemo(() => {
+    if (!contract?.fileUrl) return '';
+    try {
+      return new URL(contract.fileUrl).toString();
+    } catch (error) {
+      console.error('Invalid PDF URL:', error);
+      return '';
+    }
+  }, [contract?.fileUrl]);
 
-      const highlightColors = {
-        critical: 'bg-red-50 text-red-800 hover:bg-red-100',
-        warning: 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100',
-        improvement: 'bg-green-50 text-green-800 hover:bg-green-100'
-      };
-
-      return (
-        <span
-          key={index}
-          id={`highlight-${segment.highlight.id}`}
-          className={cn(
-            "relative group cursor-pointer transition-colors",
-            highlightColors[segment.highlight.type],
-            selectedHighlight?.id === segment.highlight.id && "ring-2 ring-primary"
-          )}
-          title={segment.highlight.message}
-        >
-          {segment.text}
-        </span>
-      );
-    });
-  };
-
-  const handleHighlightClick = (highlight: Highlight) => {
-    setSelectedHighlight(highlight);
-    
-    const element = document.getElementById(`highlight-${highlight.id}`);
-    if (element && contentRef.current) {
-      const container = contentRef.current;
-      const elementRect = element.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      
-      container.scrollTo({
-        top: element.offsetTop - containerRect.height / 2 + elementRect.height / 2,
-        behavior: 'smooth'
-      });
-
-      // Flash effect
-      element.classList.add('flash-highlight');
-      setTimeout(() => element.classList.remove('flash-highlight'), 1000);
+  const handleBack = () => {
+    if (contract?.id) {
+      router.push(`/contracts/${contract.id}`);
     }
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      {/* Main Content - Now First */}
-      <div className="flex-1 flex flex-col">
-        <div className="bg-white border-b px-4 py-2 flex items-center justify-between sticky top-0 z-50">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.back()}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-lg font-semibold">
-              {contract.title} - Revised Version
-            </h1>
+    <div className="flex h-full">
+      {/* Container do PDF */}
+      <div className="flex-1 relative h-full">
+        {/* Botão Voltar */}
+        <div className="flex items-center gap-2 mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="text-gray-600"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Contract
+          </Button>
+        </div>
+
+        {/* Info do arquivo */}
+        <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm rounded-lg p-3 mb-4">
+          <FileText className="w-4 h-4 text-gray-500" />
+          <div className="flex-1 text-sm text-gray-600">
+            {contract?.fileName || 'Untitled'} • {contract?.fileType || 'Unknown'} • {contract?.metadata?.pageCount || '-'} pages
           </div>
         </div>
 
-        <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
-          <div className="container max-w-4xl mx-auto py-8">
-            <DocumentWrapper style={{ zoom: `${zoom}%` }}>
-              <div className="prose max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed">
-                  {renderHighlightedContent()}
-                </pre>
-              </div>
-            </DocumentWrapper>
-          </div>
-        </div>
-
-        <DocumentToolbar
+        <PDFViewer
+          url={pdfUrl}
+          selectedIssue={selectedIssue}
+          onIssueClick={setSelectedIssue}
           zoom={zoom}
-          onZoomIn={() => setZoom(prev => Math.min(prev + 10, 200))}
-          onZoomOut={() => setZoom(prev => Math.max(prev - 10, 50))}
-          onZoomReset={() => setZoom(100)}
+          contractInfo={contract}
+          onFilterByType={setFilteredType}
         />
       </div>
 
-      {/* Summary Sidebar - Now Last */}
-      <div className="w-80 border-l bg-white h-full flex flex-col overflow-y-auto">
-        <div className="p-4 border-b">
-          <h2 className="font-semibold">Changes Summary</h2>
-        </div>
-        
-        <div className="p-4 space-y-4">
-          {/* Stats */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-2 bg-red-50 rounded-md">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                <span className="text-sm text-red-700">Critical Issues</span>
+      {/* Barra lateral */}
+      <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
+        <div className="p-4 space-y-6">
+          {/* Contadores Grandes */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-red-50 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-red-600 mb-1">
+                {issues.length}
               </div>
-              <span className="font-semibold text-red-700">{stats.critical}</span>
+              <div className="text-sm text-red-600/80 font-medium">
+                Total Issues
+              </div>
             </div>
-
-            <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-md">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm text-yellow-700">Warnings</span>
+            <div className="bg-blue-50 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-1">
+                {suggestedClauses.length}
               </div>
-              <span className="font-semibold text-yellow-700">{stats.warning}</span>
-            </div>
-
-            <div className="flex items-center justify-between p-2 bg-green-50 rounded-md">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-green-700">Improvements</span>
+              <div className="text-sm text-blue-600/80 font-medium">
+                New Clauses
               </div>
-              <span className="font-semibold text-green-700">{stats.improvement}</span>
             </div>
           </div>
 
-          {/* Changes List */}
-          <div className="mt-6">
-            <h3 className="text-sm font-medium mb-2">Applied Changes</h3>
-            <div className="space-y-2">
-              {highlights.map(highlight => (
-                <motion.button
-                  key={highlight.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  onClick={() => handleHighlightClick(highlight)}
+          {/* Issues Summary */}
+          <div className="space-y-2">
+            <button
+              onClick={() => setFilteredType(filteredType === 'critical' ? null : 'critical')}
+              className={cn(
+                "flex items-center justify-between w-full p-2 rounded",
+                filteredType === 'critical' ? "bg-red-50" : "hover:bg-gray-50"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                <span>Critical Issues</span>
+              </div>
+              <Badge variant="destructive">
+                {issues.filter(i => i.type === 'critical').length}
+              </Badge>
+            </button>
+
+            <button
+              onClick={() => setFilteredType(filteredType === 'warning' ? null : 'warning')}
+              className={cn(
+                "flex items-center justify-between w-full p-2 rounded",
+                filteredType === 'warning' ? "bg-yellow-50" : "hover:bg-gray-50"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-500" />
+                <span>Warnings</span>
+              </div>
+              <Badge variant="secondary">
+                {issues.filter(i => i.type === 'warning').length}
+              </Badge>
+            </button>
+
+            <button
+              onClick={() => setFilteredType(filteredType === 'improvement' ? null : 'improvement')}
+              className={cn(
+                "flex items-center justify-between w-full p-2 rounded",
+                filteredType === 'improvement' ? "bg-green-50" : "hover:bg-gray-50"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-green-500" />
+                <span>Improvements</span>
+              </div>
+              <Badge variant="outline">
+                {issues.filter(i => i.type === 'improvement').length}
+              </Badge>
+            </button>
+          </div>
+
+          {/* Lista de Issues */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg text-gray-900">Contract Issues ({issues.length})</h3>
+            {issues
+              .filter(issue => !filteredType || issue.type === filteredType)
+              .map((issue, index) => (
+                <div
+                  key={issue.id}
                   className={cn(
-                    "w-full text-left bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-all",
-                    selectedHighlight?.id === highlight.id && "ring-2 ring-primary"
+                    "p-4 rounded-lg cursor-pointer transition-all",
+                    selectedIssue?.id === issue.id ? "ring-2 ring-primary" : "hover:bg-gray-50",
+                    {
+                      'bg-red-50': issue.type === 'critical',
+                      'bg-yellow-50': issue.type === 'warning',
+                      'bg-green-50': issue.type === 'improvement'
+                    }
                   )}
+                  onClick={() => setSelectedIssue(issue)}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full mt-2",
-                      highlight.type === 'critical' && "bg-red-500",
-                      highlight.type === 'warning' && "bg-yellow-500",
-                      highlight.type === 'improvement' && "bg-green-500"
-                    )} />
-                    <div>
-                      <p className="text-sm font-medium">{highlight.message}</p>
-                      {highlight.suggestion && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {highlight.suggestion}
-                        </p>
-                      )}
+                  <div className="flex items-center gap-2 mb-2">
+                    {issue.type === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                    {issue.type === 'warning' && <AlertCircle className="w-4 h-4 text-yellow-500" />}
+                    {issue.type === 'improvement' && <Lightbulb className="w-4 h-4 text-green-500" />}
+                    <span className="font-medium">Issue #{index + 1}</span>
+                  </div>
+                  
+                  <div className="text-sm space-y-2">
+                    <div className="text-gray-600">
+                      <p className="font-medium mb-1">Selected Text:</p>
+                      <p className="italic whitespace-pre-wrap">{issue.originalText}</p>
+                    </div>
+                    
+                    <div className="text-gray-600">
+                      <p className="font-medium mb-1">AI Analysis:</p>
+                      <p className="whitespace-pre-wrap">{issue.explanation}</p>
+                    </div>
+
+                    <div className="text-gray-600">
+                      <p className="font-medium mb-1">Suggested Fix:</p>
+                      <p className="whitespace-pre-wrap">{issue.newText}</p>
                     </div>
                   </div>
-                </motion.button>
+                </div>
               ))}
-            </div>
+          </div>
+
+          {/* Lista de Suggested Clauses */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg text-gray-900">Suggested New Clauses ({suggestedClauses.length})</h3>
+            {suggestedClauses.map((clause, index) => (
+              <div key={clause.id} className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Plus className="w-4 h-4 text-green-500" />
+                  <span className="font-medium">New Clause Suggestion #{index + 1}</span>
+                </div>
+                
+                <div className="text-sm space-y-2">
+                  <p className="font-medium">{clause.title}</p>
+                  <p className="text-gray-600 whitespace-pre-wrap">{clause.explanation}</p>
+                  
+                  <div className="mt-2 p-2 bg-gray-50 rounded">
+                    <p className="text-gray-600 whitespace-pre-wrap">{clause.suggestedText}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-export default ContractRevision;

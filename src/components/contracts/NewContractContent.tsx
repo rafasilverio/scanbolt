@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, AlertCircle, Lightbulb, Plus, FileText, CheckCircle, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
 
 
 interface NewContractContentProps {
@@ -119,20 +120,20 @@ function IssueItem({
       <div className="text-sm space-y-2">
         <div className="text-gray-600">
           <p className="font-medium mb-1">Selected Text:</p>
-          <p className="line-clamp-2">{issue.originalText}</p>
+          <p className="line-clamp-2 italic">{issue.originalText}</p>
         </div>
         
         <div className="text-gray-600">
           <p className="font-medium mb-1">AI Analysis:</p>
-          <p className="line-clamp-2">{issue.explanation}</p>
+          <p className="line-clamp-2 italic">{issue.explanation}</p>
         </div>
 
         <div className="text-gray-600">
           <p className="font-medium mb-1">Fixed Clause:</p>
           {isUnlocked ? (
-            <p className="line-clamp-2">{issue.newText}</p>
+            <p className="line-clamp-2 italic">{issue.newText}</p>
           ) : (
-            <p className="line-clamp-2 text-green-600 italic">[unlock correction]</p>
+            <p className="line-clamp-2 italic">{issue.newText}</p>
           )}
         </div>
       </div>
@@ -162,19 +163,9 @@ function SuggestedClauseItem({
       <div className="text-sm space-y-2">
         <p className="font-medium">{clause.title}</p>
         <p className="text-gray-600">{clause.explanation}</p>
-        
-        {isUnlocked ? (
-          <div className="mt-2 p-2 bg-gray-50 rounded">
-            <p className="text-gray-600">{clause.suggestedText}</p>
-          </div>
-        ) : (
-          <button
-            onClick={onUpgrade}
-            className="w-full mt-2 bg-green-500 text-white py-2 px-3 rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
-          >
-            Unlock Suggestion ($19)
-          </button>
-        )}
+        <div className="mt-2 p-2 bg-gray-50 rounded">
+          <p className="text-gray-600 italic">{clause.suggestedText}</p>
+        </div>
       </div>
     </div>
   );
@@ -193,6 +184,7 @@ export function NewContractContent({
   const [filteredType, setFilteredType] = useState<IssueType | null>(null);
   const [zoom, setZoom] = useState(100);
   const [localSelectedIssue, setLocalSelectedIssue] = useState<ContractIssue | null>(selectedIssue);
+  const router = useRouter();
 
   // Sincronizar o estado local com a prop
   useEffect(() => {
@@ -317,6 +309,11 @@ export function NewContractContent({
     };
   };
 
+  const handleGenerateRevision = async () => {
+    if (!contract?.id) return;
+    router.push(`/contracts/${contract.id}/revision`);
+  };
+
   return (
     <div className="flex h-full">
       {/* Container do PDF */}
@@ -375,30 +372,30 @@ export function NewContractContent({
           {/* Conteúdo das tabs */}
           {activeTab === 'issues' ? (
             <div className="space-y-6">
-              {/* Premium CTA */}
+              {/* Novo CTA Gratuito */}
               <div className="bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-lg p-6 border border-green-500/20">
                 <h3 className="text-xl font-semibold text-green-600 mb-3">
-                  Generate New Contract Now
+                  See All Contract Issues & Suggestions
                 </h3>
                 <div className="space-y-2 text-sm text-gray-600 mb-4">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    <p>Revised Clauses with Security for You</p>
+                    <p>Complete Analysis of Your Contract</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Plus className="w-4 h-4 text-green-500" />
-                    <p>With New Importants Clauses</p>
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <p>All Issues and Improvements Listed</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-green-500" />
-                    <p>Commented for Other Parties/Lawyers</p>
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <p>Suggested New Clauses</p>
                   </div>
                 </div>
                 <Button 
-                  onClick={onUpgrade}
+                  onClick={handleGenerateRevision}
                   className="w-full bg-green-500 hover:bg-green-600 text-white transition-colors"
                 >
-                  Generate New Contract only $19
+                  View Complete Analysis (FREE)
                 </Button>
               </div>
 
