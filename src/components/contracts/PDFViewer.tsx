@@ -13,7 +13,7 @@ import {
 import { Contract, ContractIssue } from "@/types/contract";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
-import * as pdfjs from 'pdfjs-dist';
+import * as pdfjs from 'pdfjs-dist'; 
 
 // Configurar o worker do PDF.js com a versão específica
 if (typeof window !== 'undefined') {

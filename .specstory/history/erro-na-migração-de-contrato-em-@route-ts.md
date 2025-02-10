@@ -10740,6 +10740,314 @@ Me avise se precisar ajustar algo mais!
 
 ---
 
+_**User**_
+
+por favor me ajude
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+Este erro está relacionado à versão do Node.js e à compatibilidade com o PDF.js. Vamos corrigir o arquivo `pdfjs-worker.ts`:
+
+```typescript:src/lib/pdfjs-worker.ts
+import * as pdfjs from 'pdfjs-dist';
+
+if (typeof window !== 'undefined') {
+  // Configurar o worker do PDF.js com a versão específica e compatível
+  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+}
+
+// Configurações adicionais do PDF.js
+pdfjs.GlobalWorkerOptions.workerPort = null;
+```
+
+
+Principais mudanças:
+1. Usando uma versão mais antiga e estável do PDF.js (3.11.174)
+2. Adicionando verificação de ambiente
+3. Configurando `workerPort` como null para evitar problemas com `Promise.withResolvers`
+
+Você também precisa atualizar a versão do PDF.js no `package.json`:
+```json
+{
+  "dependencies": {
+    "pdfjs-dist": "3.11.174"
+  }
+}
+```
+
+
+Depois execute:
+```bash
+npm install
+npm run dev
+```
+
+
+Isso deve resolver o erro de compatibilidade com o PDF.js.
+
+---
+
+_**User**_
+
+ajude me a corrigir o erro e manter a versão atual da lib
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+
+
+Vamos atualizar o arquivo `pdfjs-worker.ts` para funcionar com a versão mais recente do PDF.js e resolver o erro de `Promise.withResolvers`:
+
+```typescript:src/lib/pdfjs-worker.ts
+import { GlobalWorkerOptions } from 'pdfjs-dist';
+
+if (typeof window !== 'undefined') {
+  const workerUrl = new URL(
+    'pdfjs-dist/build/pdf.worker.min.js',
+    import.meta.url
+  );
+  
+  GlobalWorkerOptions.workerSrc = workerUrl.href;
+}
+```
+
+E no seu `next.config.js`, adicione:
+
+```javascript:next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'pdfjs-dist': 'pdfjs-dist/legacy/build/pdf',
+    };
+    return config;
+  },
+}
+
+module.exports = nextConfig;
+```
+
+Isso vai:
+1. Usar a versão legacy do PDF.js que não depende de `Promise.withResolvers`
+2. Manter a versão atual da biblioteca
+3. Resolver o erro de geração de paths estáticos
+
+Me avise se o erro persistir!
+
+---
+
+_**User**_
+
+For the code present, we get this error:
+```
+Não é possível localizar o módulo 'pdfjs-dist/legacy/build/pdf' ou suas declarações de tipo correspondentes.
+```
+How can I resolve this? If you propose a fix, please make it concise.
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+Vamos corrigir o caminho do import no `pdfjs-worker.ts`:
+
+```typescript:src/lib/pdfjs-worker.ts
+import { GlobalWorkerOptions } from 'pdfjs-dist/build/pdf';
+
+if (typeof window !== 'undefined') {
+  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${GlobalWorkerOptions.workerVersion}/pdf.worker.min.js`;
+}
+```
+
+
+E no `next.config.js`:
+```javascript:next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'pdfjs-dist': 'pdfjs-dist/build/pdf',
+    };
+    return config;
+  },
+}
+
+module.exports = nextConfig;
+```
+
+Isso deve resolver o erro de importação.
+
+---
+
+_**User**_
+
+ajude-me a corrigir o deploy:
+
+Failed to compile.
+./src/lib/pdfjs-worker.ts:4:98
+Type error: Property 'workerVersion' does not exist on type 'typeof GlobalWorkerOptions'.
+2 |
+3 | if (typeof window !== 'undefined') {
+> 4 | GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${GlobalWorkerOptions.workerVersion}/pdf.worker.min.js`;
+| ^
+5 | }
+Error: Command "npm run build" exited with 1
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+
+
+Vamos corrigir o `pdfjs-worker.ts` usando uma versão específica do PDF.js em vez de tentar acessar a `workerVersion`:
+
+```typescript:src/lib/pdfjs-worker.ts
+import { GlobalWorkerOptions } from 'pdfjs-dist/build/pdf';
+
+if (typeof window !== 'undefined') {
+  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.worker.min.js`;
+}
+```
+
+
+Isso resolve o erro usando uma versão fixa do worker, que é mais seguro para deploy. A versão 4.0.269 é a mais recente estável.
+
+---
+
+_**User**_
+
+ajude-me a resolver
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Vamos atualizar o `pdfjs-worker.ts` para evitar o erro de `Promise.withResolvers` durante a geração estática:
+
+```typescript:src/lib/pdfjs-worker.ts
+'use client';
+
+import { GlobalWorkerOptions } from 'pdfjs-dist/build/pdf';
+
+if (typeof window !== 'undefined') {
+  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.worker.min.js`;
+}
+```
+
+
+
+Principais mudanças:
+1. Adicionado `'use client'` para garantir que o código só rode no cliente
+2. Mantido a verificação de `window`
+3. Mantido a versão fixa do worker
+
+Isso deve resolver o erro de geração estática pois o código só será executado no cliente.
+
+---
+
+_**User**_
+
+explique me este erro do console
+
+---
+
+_**Assistant**_
+
+
+
+Este erro está ocorrendo porque o Next.js está tentando renderizar componentes que dependem do `window` e `document` no servidor (SSR - Server Side Rendering). Especificamente:
+
+1. O componente `PdfHighlighter` da biblioteca `react-pdf-highlighter-extended` está tentando acessar:
+   - `window` (linha 454)
+   - `document` (linha 456)
+2. Estes objetos só existem no navegador (client-side), não no servidor
+
+Para resolver, precisamos:
+
+1. Marcar o componente que usa o PDF Highlighter como client-side only:
+```typescript:src/components/contracts/PDFViewer.tsx
+'use client';
+
+import dynamic from 'next/dynamic';
+
+// Importar o PdfHighlighter com dynamic import e ssr: false
+const PdfHighlighter = dynamic(
+  () => import('react-pdf-highlighter-extended').then(mod => mod.PdfHighlighter),
+  { ssr: false }
+);
+
+// ... resto do código
+```
+
+2. Ou mover a página inteira para client-side:
+```typescript:src/app/(protected)/contracts/[id]/page.tsx
+'use client';
+
+// ... resto do código
+```
+
+Qual abordagem você prefere tentar primeiro?
+
+---
+
 
 
 ---
