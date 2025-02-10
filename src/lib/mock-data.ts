@@ -2,7 +2,9 @@ import { Contract } from '@/types/contract';
 
 export const mockContract: Contract = {
   id: "1",
-  title: "Software Development Agreement",
+  userId: "user123",
+  fileName: "Software Development Agreement",
+  fileType: "application/pdf",
   content: `SOFTWARE DEVELOPMENT AGREEMENT
 
 This Software Development Agreement (the "Agreement") is made and entered into on [DATE] by and between:
@@ -50,7 +52,7 @@ and
 
 7. TERMINATION
 
-7.1 Either party may terminate this Agreement with 30 days written notice.
+7.1 Either party may terminate this Agreement with 60 days written notice.
 
 8. GOVERNING LAW
 
@@ -58,82 +60,58 @@ and
 
 IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written.
 
-[SIGNATURES]`,
+Client:
+_______________________
+[CLIENT NAME]
+[TITLE]
+[DATE]
+
+Developer:
+_______________________  
+[DEVELOPER NAME]
+[TITLE] 
+[DATE]`,
   fileUrl: "/mock-contract.pdf",
-  fileType: "application/pdf",
-  highlights: [
-    // Critical Issues (8)
+  issues: [
     {
-      id: "c1",
+      id: "issue1",
       type: "critical",
-      message: "Missing specific jurisdiction definition",
-      suggestion: "Define specific jurisdiction (e.g., 'State of California, United States')",
-      startIndex: 150,
-      endIndex: 165,
-    },
-    // ... (previous 7 critical issues)
-
-    // Warnings (9)
-    {
-      id: "w1",
-      type: "warning",
-      message: "Vague project timeline",
-      suggestion: "Add specific dates or durations",
-      startIndex: 400,
-      endIndex: 450,
-    },
-    // ... (previous 8 warning issues)
-
-    // Improvements (8)
-    {
-      id: "i1",
-      type: "improvement",
-      message: "Consider adding milestone payments",
-      suggestion: "Break down payment schedule into smaller milestones",
-      startIndex: 850,
-      endIndex: 900,
-    },
-    // ... (previous 7 improvement issues)
-  ],
-  changes: [
-    {
-      id: "change1",
-      content: "State of California, United States",
-      originalContent: "California",
-      explanation: "Specify the jurisdiction explicitly",
-      suggestion: "Define specific jurisdiction (e.g., 'State of California, United States')",
-      status: 'pending' as const,
-      reason: "Adding explicit jurisdiction helps avoid ambiguity in legal interpretation",
-      type: "critical" as const,
-      startIndex: 123,
-      endIndex: 145,
-    },
-    {
-      id: "change2",
-      content: "Planning and Design: 4 weeks\nDevelopment: 12 weeks\nTesting: 3 weeks\nDeployment: 1 week",
-      originalContent: "4 weeks\n12 weeks\n3 weeks\n1 week",
-      explanation: "Add specific timeline durations",
-      suggestion: "Add specific dates or durations",
-      status: 'pending' as const,
-      reason: "Adding specific durations helps avoid ambiguity in project timelines",
-      type: "warning" as const,
-      startIndex: 400,
-      endIndex: 450,
-    },
-    {
-      id: "change3",
-      content: "Payment milestones:\n- 20% upon signing\n- 20% after requirements approval\n- 30% after development\n- 20% after testing\n- 10% after deployment",
-      originalContent: "30% after development\n20% after testing\n10% after deployment",
-      explanation: "More granular payment schedule",
-      suggestion: "Break down payment schedule into smaller milestones",
-      status: 'pending' as const,
-      reason: "Breaking down payment schedule into smaller milestones helps avoid ambiguity in payment terms",
-      type: "improvement" as const,
-      startIndex: 850,
-      endIndex: 900,
+      originalText: "Either party may terminate this Agreement with 30 days written notice.",
+      newText: "Either party may terminate this Agreement with 60 days written notice.",
+      explanation: "Standard industry practice requires 60 days notice for termination.",
+      riskType: "legal",
+      status: "pending",
+      position: {
+        startIndex: 1500,
+        endIndex: 1570,
+        pageNumber: 1,
+        x1: 50,
+        y1: 500,
+        x2: 500,
+        y2: 520,
+        width: 450,
+        height: 20
+      }
     }
   ],
-  createdAt: "2024-03-20T10:00:00Z",
-  updatedAt: "2024-03-20T10:00:00Z",
-  status: "under_review"
+  suggestedClauses: [
+    {
+      id: "clause1",
+      title: "Force Majeure",
+      explanation: "Add protection against unforeseen circumstances",
+      suggestedText: "Neither party shall be liable for any failure or delay...",
+      riskType: "legal",
+      status: "pending",
+      suggestedPosition: {
+        afterClause: "7. TERMINATION",
+        pageNumber: 2
+      }
+    }
+  ],
+  status: "analyzing",
+  metadata: {
+    pageCount: 3,
+    createdAt: new Date("2024-03-20T10:00:00Z"),
+    updatedAt: new Date("2024-03-20T10:00:00Z")
+  }
 };
