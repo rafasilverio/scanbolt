@@ -11132,6 +11132,49 @@ Me avise se precisar de mais ajustes!
 
 ---
 
+_**User**_
+
+para que serve este arquivo no projeto?
+
+---
+
+_**Assistant**_
+
+
+
+O `contract-store.ts` é um store global usando Zustand que serve para:
+
+1. Manter o estado do contrato atual entre componentes
+2. Compartilhar dados do contrato em diferentes partes da aplicação
+3. Gerenciar o status de processamento do contrato
+
+Porém, analisando o código atual do projeto:
+1. A maioria dos componentes já gerencia seu próprio estado
+2. As páginas buscam dados diretamente da API
+3. O estado é passado via props entre componentes
+4. Não estamos mais usando funcionalidades como highlights/changes
+
+Sugestão:
+1. Podemos remover o `contract-store.ts`
+2. Atualizar os componentes que ainda o utilizam para usar estado local
+3. Simplificar o gerenciamento de estado da aplicação
+
+Quer que eu procure onde ele ainda está sendo usado para fazermos essa remoção com segurança?
+
+---
+
+_**User**_
+
+sim, procure por favor
+
+---
+
+_**Assistant**_
+
+
+
+---
+
 
 
 ---
