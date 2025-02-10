@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { Contract, AIChange, Highlight } from '@/types/contract';
+import { Contract } from '@/types/contract';
 
 interface ContractStore {
   contract: Contract | null;
@@ -14,32 +14,18 @@ export const useContractStore = create<ContractStore>((set, get) => ({
   isGenerating: false,
 
   setContract: (contract: Contract) => {
-    // Generate changes from highlights if changes array is empty
-    const changes = contract.changes.length === 0 
-      ? contract.highlights.map(highlight => ({
-          id: uuidv4(),
-          content: highlight.suggestion || '',
-          originalContent: contract.content.slice(highlight.startIndex, highlight.endIndex),
-          explanation: highlight.message,
-          suggestion: highlight.suggestion || '',
-          status: 'pending' as const,
-          reason: highlight.message,
-          type: highlight.type,
-          startIndex: highlight.startIndex,
-          endIndex: highlight.endIndex
-        }))
-      : contract.changes;
-
-    // Ensure all highlights and changes have valid IDs
+    // Ensure all issues have valid IDs
     const processedContract = {
       ...contract,
-      highlights: (contract.highlights || []).map(h => ({
-        ...h,
-        id: h.id || uuidv4()
+      issues: (contract.issues || []).map(issue => ({
+        ...issue,
+        id: issue.id || uuidv4(),
+        status: issue.status || 'pending'
       })),
-      changes: changes.map(c => ({
-        ...c,
-        id: c.id || uuidv4()
+      suggestedClauses: (contract.suggestedClauses || []).map(clause => ({
+        ...clause,
+        id: clause.id || uuidv4(),
+        status: clause.status || 'pending'
       }))
     };
     
