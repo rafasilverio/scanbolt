@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Contract } from '@/types/contract';
+import { Contract, ContractIssue } from '@/types/contract';
 import { useRouter } from 'next/navigation';
 import { DocumentWrapper } from '@/components/contracts/DocumentWrapper';
-import { ContractContent } from '@/components/contracts/ContractContent';
+import { NewContractContent } from '@/components/contracts/NewContractContent';
 import { AlertCircle } from 'lucide-react';
 import { DEFAULT_PREVIEW_STATS } from '@/types/preview';
 import { PreviewRegisterDialog } from '@/components/auth/PreviewRegisterDialog';
@@ -90,17 +90,18 @@ export default function PreviewPage({ params }: { params: { tempId: string } }) 
       <div className="flex-1 container mx-auto px-4 pb-6">
         <div className="bg-white rounded-xl overflow-hidden shadow-xl">
           <DocumentWrapper contract={previewData ?? undefined}>
-            <ContractContent
+            <NewContractContent
               contract={previewData ?? undefined}
-              highlights={[]}
-              onHighlightClick={() => { } }
-              selectedHighlight={null}
-              selectedChange={null}
-              onChangeSelect={() => { } } isFirstIssue={false} onUpgrade={function (): void {
+              isFirstIssue={false}
+              onUpgrade={() => {
                 throw new Error('Function not implemented.');
-              } } onNext={function (): void {
+              } }
+              onNext={() => {
                 throw new Error('Function not implemented.');
-              } } onClose={function (): void {
+              } }
+              onClose={() => {
+                throw new Error('Function not implemented.');
+              } } selectedIssue={null} onIssueClick={function (issue: ContractIssue): void {
                 throw new Error('Function not implemented.');
               } }            />
             <BlurredPreview 

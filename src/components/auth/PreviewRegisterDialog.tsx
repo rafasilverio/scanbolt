@@ -170,29 +170,29 @@ export function PreviewRegisterDialog({
                 AI Magic in Progress! ✨
               </h3>
               
-              <p className="text-white/60 mb-6 text-sm leading-relaxed">
+              <p className="text-white mb-6 text-sm leading-relaxed">
                 Our AI is diving deep into your contract, uncovering insights and potential issues. Just a moment while we work our magic...
               </p>
 
               <div className="space-y-3 mb-6">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/50">Analyzing document structure</span>
+                  <span className="text-white">Analyzing document structure</span>
                   <CheckIcon className="w-4 h-4 text-green-300/80" />
                 </div>
                 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/50">Identifying key clauses</span>
+                  <span className="text-white">Identifying key clauses</span>
                   <CheckIcon className="w-4 h-4 text-green-300/80" />
                 </div>
                 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/50">Running legal analysis</span>
+                  <span className="text-white">Running legal analysis</span>
                   <Loader className="w-4 h-4 animate-spin text-blue-300/80" />
                 </div>
               </div>
 
-              <div className="bg-indigo-900/20 rounded-lg p-4 text-sm text-white/50 mb-6">
-                <p className="font-medium text-white/70 mb-1">Did you know? 🤓</p>
+              <div className="bg-indigo-900/20 rounded-lg p-4 text-sm text-white mb-6">
+                <p className="font-medium text-white mb-1">Did you know? 🤓</p>
                 <p>Our AI reads contracts faster than a lawyer on espresso! It analyzes hundreds of legal patterns in seconds.</p>
               </div>
 
