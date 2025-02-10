@@ -9498,7 +9498,319 @@ export default function ContractViewer({
   isGenerating: externalIsGenerating 
 }: ContractViewerProps) {
   const router = useRouter();
-  const
+  const { 
+    contract: storeContract, 
+    setContract, 
+  } = useContractStore();
+
+  // Initialize store with initial contract data
+  useEffect(() => {
+    if (initialContract) {
+      try {
+        setContract(initialContract);
+      } catch (error) {
+        console.error('Error processing contract data:', error);
+      }
+    }
+  }, [initialContract, setContract]);
+
+  // Add polling for contract updates
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    const pollForUpdates = async () => {
+      if (storeContract?.status === 'under_review') {
+        try {
+          const response = await fetch(`/api/contracts/${storeContract.id}`);
+          const data = await response.json();
+          
+          if (data.contract) {
+            setContract(data.contract);
+
+            if (data.contract.status === 'approved') {
+              clearInterval(pollInterval);
+            }
+          }
+        } catch (error) {
+          console.error('Error polling for updates:', error);
+          clearInterval(pollInterval);
+        }
+      }
+    };
+
+    if (storeContract?.status === 'under_review') {
+      pollInterval = setInterval(pollForUpdates, 2000);
+    }
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [storeContract?.status, storeContract?.id, setContract]);
+
+  const handleGenerateRevision = async () => {
+    try {
+      if (!storeContract) return;
+      
+      setContract({ ...storeContract, status: 'generating' });
+
+      const response = await fetch(`/api/contracts/${storeContract.id}/revision`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          originalContent: storeContract.content,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.contract) {
+        setContract(data.contract);
+        router.push(`/contracts/${storeContract.id}/revision`);
+      }
+    } catch (error) {
+      console.error('Error generating revision:', error);
+      setContract({ ...storeContract!, status: 'under_review' });
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full">
+          <DocumentWrapper contract={storeContract}>
+            <NewContractContent
+              contract={storeContract}
+            />
+          </DocumentWrapper>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Removido toda a lógica relacionada a changes
+2. Removido estados e funções de navegação entre changes
+3. Simplificado a inicialização do contrato
+4. Simplificado o polling de atualizações
+5. Simplificado a geração de revisão
+6. Removido props desnecessárias do NewContractContent
+7. Mantido apenas funcionalidades essenciais:
+   - Visualização do contrato
+   - Polling de atualizações
+   - Geração de revisão básica
+
+Me avise se precisar de mais ajustes ou se quiser que eu revise alguma parte específica!
+
+---
+
+_**User**_
+
+este componente é usado em algo funcional?
+
+---
+
+_**Assistant**_
+
+Analisando o código, o `ContractViewer` parece ter sido substituído em funcionalidade pelo `NewContractContent` e `ContractRevision`. 
+
+As principais funcionalidades que ele tinha:
+1. Visualização do contrato - agora feita pelo `NewContractContent`
+2. Geração de revisão - agora feita diretamente na página de revisão
+3. Polling de atualizações - agora gerenciado em outros componentes
+
+Sugestões:
+1. Podemos remover o `ContractViewer` completamente já que suas responsabilidades foram migradas
+2. Atualizar as rotas/páginas que ainda possam estar importando ele
+3. Garantir que o `NewContractContent` e `ContractRevision` cubram todos os casos de uso
+
+Quer que eu procure onde ele ainda pode estar sendo importado para fazermos uma remoção segura?
+
+---
+
+_**User**_
+
+sim, por favor
+
+---
+
+_**Assistant**_
+
+
+
+Vou procurar em todo o projeto onde o `ContractViewer` está sendo importado ou usado.
+
+Encontrei o uso em:
+```typescript:src/app/(protected)/contracts/[id]/page.tsx
+import ContractViewer from '@/components/contracts/ContractViewer';
+
+export default async function ContractPage({ params }: { params: { id: string } }) {
+  // ... lógica de fetch do contrato ...
+
+  return (
+    <div className="h-screen">
+      <ContractViewer 
+        contract={contract}
+        onGenerateRevision={handleGenerateRevision}
+        isGenerating={isGenerating}
+      />
+    </div>
+  );
+}
+```
+
+Podemos substituir esta página por:
+
+```typescript:src/app/(protected)/contracts/[id]/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Contract } from '@/types/contract';
+import { NewContractContent } from '@/components/contracts/NewContractContent';
+import { DocumentWrapper } from '@/components/contracts/DocumentWrapper';
+
+export default function ContractPage({ params }: { params: { id: string } }) {
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContract = async () => {
+      try {
+        const response = await fetch(`/api/contracts/${params.id}`);
+        if (!response.ok) throw new Error('Failed to fetch contract');
+        const data = await response.json();
+        setContract(data);
+      } catch (error) {
+        console.error('Error fetching contract:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContract();
+  }, [params.id]);
+
+  if (isLoading) {
+    return <div>Loading...</div>; // Você pode usar o skeleton loading que criamos anteriormente
+  }
+
+  if (!contract) {
+    return <div>Contract not found</div>;
+  }
+
+  return (
+    <div className="h-screen">
+      <DocumentWrapper contract={contract}>
+        <NewContractContent
+          contract={contract}
+        />
+      </DocumentWrapper>
+    </div>
+  );
+}
+```
+
+Depois disso, podemos:
+1. Deletar o arquivo `src/components/contracts/ContractViewer.tsx`
+2. Remover quaisquer tipos ou interfaces relacionadas que não estejam mais sendo usados
+3. Remover imports não utilizados em outros arquivos
+
+Quer que eu proceda com essas alterações?
+
+---
+
+_**User**_
+
+eu estou falando do "GenerateContract"
+
+---
+
+_**Assistant**_
+
+
+
+Ah, desculpe a confusão! Vamos analisar o `GenerateContract`:
+
+```typescript:src/components/contracts/GenerateContract.ts
+import { Contract, Highlight, AIChange } from "@/types/contract";
+
+export function generateImprovedContract(contract: Contract): string {
+  // Sort all changes by startIndex in reverse order to avoid index shifting
+  const allChanges = [
+    ...contract.highlights.filter(h => h.suggestion).map(h => ({
+      startIndex: h.startIndex,
+      endIndex: h.endIndex,
+      suggestion: h.suggestion as string,
+      type: h.type
+    })),
+    ...contract.changes.map(c => ({
+      startIndex: c.startIndex,
+      endIndex: c.endIndex,
+      suggestion: c.suggestion,
+      type: c.type
+    }))
+  ].sort((a, b) => b.startIndex - a.startIndex);
+
+  // Apply changes from end to start to maintain correct indices
+  let improvedContent = contract.content;
+  allChanges.forEach(change => {
+    improvedContent = 
+      improvedContent.slice(0, change.startIndex) + 
+      change.suggestion +
+      improvedContent.slice(change.endIndex);
+  });
+
+  return improvedContent;
+}
+```
+
+Este componente não está mais sendo usado porque:
+1. A lógica de highlights foi removida
+2. A lógica de changes foi removida
+3. A geração do contrato melhorado agora é feita diretamente na API
+
+Podemos remover este arquivo com segurança, já que suas funcionalidades foram substituídas pela lógica na API de revisão.
+
+Quer que eu proceda com a remoção?
+
+---
+
+_**User**_
+
+For the code present, we get this error:
+```
+O módulo '"@/types/contract"' não tem nenhum membro exportado 'Highlight'.
+```
+How can I resolve this? If you propose a fix, please make it concise.
+
+---
+
+_**Assistant**_
+
+
+
+Vamos adicionar o tipo `Highlight` ao arquivo de tipos:
+
+```typescript:src/types/contract.ts
+export interface Highlight {
+  id: string;
+  content: {
+    text: string;
+  };
+  comment?: {
+    type: 'critical' | 'warning' | 'improvement';
+    message: string;
+    suggestion: string;
+  };
+}
+```
+
+Isso deve resolver o erro de exportação do tipo `Highlight`. O tipo foi definido com base no uso no `InlineComment.tsx`.
 
 ---
 

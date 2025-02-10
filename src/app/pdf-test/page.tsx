@@ -93,7 +93,12 @@ export default function PDFTestPage() {
             {selectedHighlightId && (
               <div className="mt-20">
                 <InlineComment
-                  change={exampleChange}
+                  change={{
+                    ...exampleChange,
+                    content: {
+                      text: exampleChange.content
+                    }
+                  }}
                   onClose={handleCloseComment}
                   onNext={handleNextIssue}
                 />
