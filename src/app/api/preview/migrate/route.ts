@@ -86,9 +86,7 @@ export async function POST(request: Request) {
     // Log para debug (omitindo dados sensíveis)
     console.log('Created contract:', {
       ...contract,
-      content: '[content omitted]',
-      issues: contract.issues?.length || 0,
-      suggestedClauses: contract.suggestedClauses?.length || 0
+      content: '[content omitted]'
     });
 
     // Iniciar processamento em background

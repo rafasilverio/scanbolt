@@ -89,15 +89,20 @@ export default function PreviewPage({ params }: { params: { tempId: string } }) 
       {/* Main Content */}
       <div className="flex-1 container mx-auto px-4 pb-6">
         <div className="bg-white rounded-xl overflow-hidden shadow-xl">
-          <DocumentWrapper contract={previewData}>
+          <DocumentWrapper contract={previewData ?? undefined}>
             <ContractContent
-              contract={previewData}
+              contract={previewData ?? undefined}
               highlights={[]}
-              onHighlightClick={() => {}}
+              onHighlightClick={() => { } }
               selectedHighlight={null}
               selectedChange={null}
-              onChangeSelect={() => {}}
-            />
+              onChangeSelect={() => { } } isFirstIssue={false} onUpgrade={function (): void {
+                throw new Error('Function not implemented.');
+              } } onNext={function (): void {
+                throw new Error('Function not implemented.');
+              } } onClose={function (): void {
+                throw new Error('Function not implemented.');
+              } }            />
             <BlurredPreview 
               tempId={params.tempId}
               onViewFullAnalysis={handleViewFullAnalysis}

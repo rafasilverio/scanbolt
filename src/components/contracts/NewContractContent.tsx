@@ -327,15 +327,13 @@ export function NewContractContent({
         <PDFViewer
           url={pdfUrl}
           selectedIssue={localSelectedIssue}
-          onIssueClick={handleIssueClick}
-          zoom={zoom}
-          contractInfo={contract}
-          onFilterByType={setFilteredType}
-          isFirstIssue={isFirstIssue}
-          onUpgrade={onUpgrade}
-          onNext={onNext}
-          onClose={onClose}
-        />
+          onIssueClick={handleIssueClick} isFirstIssue={false} onUpgrade={function (): void {
+            throw new Error('Function not implemented.');
+          } } onNext={function (): void {
+            throw new Error('Function not implemented.');
+          } } onClose={function (): void {
+            throw new Error('Function not implemented.');
+          } }        />
       </div>
 
       {/* Barra lateral */}

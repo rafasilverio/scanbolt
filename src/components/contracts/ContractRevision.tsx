@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, AwaitedReactNode, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from 'react';
+import { useState, useEffect, useMemo, AwaitedReactNode, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, SetStateAction } from 'react';
 import { Contract, ContractIssue, IssueType, SuggestedClause } from "@/types/contract";
 import { PDFViewer } from "./PDFViewer";
 import { Badge } from "@/components/ui/badge";
@@ -92,10 +92,13 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
           url={pdfUrl}
           selectedIssue={selectedIssue}
           onIssueClick={setSelectedIssue}
-          zoom={zoom}
-          contractInfo={contract}
-          onFilterByType={setFilteredType}
-        />
+          contractInfo={contract} isFirstIssue={false} onUpgrade={function (): void {
+            throw new Error('Function not implemented.');
+          } } onNext={function (): void {
+            throw new Error('Function not implemented.');
+          } } onClose={function (): void {
+            throw new Error('Function not implemented.');
+          } }        />
       </div>
 
       {/* Barra lateral */}
@@ -135,7 +138,7 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
                 <span>Critical Issues</span>
               </div>
               <Badge variant="destructive">
-                {issues.filter(i => i.type === 'critical').length}
+                {issues.filter((i: { type: string; }) => i.type === 'critical').length}
               </Badge>
             </button>
 
@@ -151,7 +154,7 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
                 <span>Warnings</span>
               </div>
               <Badge variant="secondary">
-                {issues.filter(i => i.type === 'warning').length}
+                {issues.filter((i: { type: string; }) => i.type === 'warning').length}
               </Badge>
             </button>
 
@@ -167,7 +170,7 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
                 <span>Improvements</span>
               </div>
               <Badge variant="outline">
-                {issues.filter(i => i.type === 'improvement').length}
+                {issues.filter((i: { type: string; }) => i.type === 'improvement').length}
               </Badge>
             </button>
           </div>
@@ -176,8 +179,8 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
           <div className="space-y-4">
             <h3 className="font-semibold text-lg text-gray-900">Contract Issues ({issues.length})</h3>
             {issues
-              .filter(issue => !filteredType || issue.type === filteredType)
-              .map((issue, index) => (
+              .filter((issue: { type: string; }) => !filteredType || issue.type === filteredType)
+              .map((issue: ContractIssue, index: number) => (
                 <div
                   key={issue.id}
                   className={cn(
@@ -221,7 +224,7 @@ export function ContractRevision({ contract }: ContractRevisionProps) {
           {/* Lista de Suggested Clauses */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg text-gray-900">Suggested New Clauses ({suggestedClauses.length})</h3>
-            {suggestedClauses.map((clause, index) => (
+            {suggestedClauses.map((clause: { id: Key | null | undefined; title: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; explanation: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; suggestedText: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined; }, index: number) => (
               <div key={clause.id} className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
                 <div className="flex items-center gap-2 mb-2">
                   <Plus className="w-4 h-4 text-green-500" />

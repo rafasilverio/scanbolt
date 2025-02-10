@@ -115,8 +115,8 @@ export async function updateContractStatus(contractId: string, status: string, i
       where: { id: contractId },
       data: {
         status,
-        issues,
-        suggestedClauses
+        issues: JSON.stringify(issues),
+        suggestedClauses: JSON.stringify(suggestedClauses)
       }
     });
   } catch (error) {
