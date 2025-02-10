@@ -1,5 +1,16 @@
 import { X, ArrowRight, CheckCircle, AlertTriangle, AlertCircle, Lightbulb } from 'lucide-react';
-import { Highlight } from '@/types/contract';
+
+export interface Highlight {
+  id: string;
+  content: {
+    text: string;
+  };
+  comment?: {
+    type: 'critical' | 'warning' | 'improvement';
+    message: string;
+    suggestion: string;
+  };
+}
 
 interface PremiumIssueDialogProps {
   highlight: Highlight;
@@ -10,7 +21,7 @@ interface PremiumIssueDialogProps {
 
 export function PremiumIssueDialog({ highlight, onClose, onNext, hasNext }: PremiumIssueDialogProps) {
   const getIssueIcon = () => {
-    switch (highlight.type) {
+    switch (highlight.comment?.type) {
       case 'critical':
         return <AlertCircle className="w-4 h-4 mr-1.5" />;
       case 'warning':
@@ -21,7 +32,7 @@ export function PremiumIssueDialog({ highlight, onClose, onNext, hasNext }: Prem
   };
 
   const getIssueColor = () => {
-    switch (highlight.type) {
+    switch (highlight.comment?.type) {
       case 'critical':
         return 'bg-red-50 text-red-600';
       case 'warning':
@@ -32,7 +43,7 @@ export function PremiumIssueDialog({ highlight, onClose, onNext, hasNext }: Prem
   };
 
   const getIssueLabel = () => {
-    switch (highlight.type) {
+    switch (highlight.comment?.type) {
       case 'critical':
         return 'Critical Issue';
       case 'warning':
@@ -64,13 +75,13 @@ export function PremiumIssueDialog({ highlight, onClose, onNext, hasNext }: Prem
         <div>
           <div className="text-sm text-gray-600 mb-1.5">Current Text:</div>
           <div className="p-3 bg-gray-50 rounded text-sm border">
-            {highlight.originalText}
+            {highlight.content.text}
           </div>
         </div>
         
         {/* Quick Reason */}
         <div className="text-sm text-gray-600">
-          {highlight.message}
+          {highlight.comment?.message}
         </div>
 
         {/* Premium CTA */}
