@@ -65,9 +65,9 @@ export default function StatsHeader({ contract, onIssueClick, selectedIssueType 
   }, [contract?.issues]);
 
   // Count all types of issues
-  const warningCount = issues.filter(i => i.type === 'warning').length;
-  const criticalCount = issues.filter(i => i.type === 'critical').length;
-  const improvementCount = issues.filter(i => i.type === 'improvement').length;
+  const warningCount = issues.filter((i: ContractIssue) => i.type === 'warning').length;
+  const criticalCount = issues.filter((i: ContractIssue) => i.type === 'critical').length;
+  const improvementCount = issues.filter((i: ContractIssue) => i.type === 'improvement').length;
 
   const getStatusColor = (status: string) => {
     switch (status) {
