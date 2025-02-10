@@ -4,6 +4,7 @@ import { PDFViewer } from "@/components/contracts/PDFViewer";
 import { InlineComment } from "@/components/contracts/InlineComment";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ContractIssue } from "@/types/contract";
 
 const exampleHighlights = [
   {
@@ -80,12 +81,15 @@ export default function PDFTestPage() {
         <div className="flex-1 flex flex-col bg-gray-50 rounded-lg overflow-hidden">
           <div className="flex-1 overflow-y-auto relative">
             <PDFViewer 
-              url="/sample.pdf"
-              zoom={120}
-              highlights={exampleHighlights}
-              selectedHighlightId={selectedHighlightId}
-              onHighlightClick={handleHighlightClick}
-            />
+              url="/sample.pdf" selectedIssue={null} onIssueClick={function (issue: ContractIssue): void {
+                throw new Error("Function not implemented.");
+              } } isFirstIssue={false} onUpgrade={function (): void {
+                throw new Error("Function not implemented.");
+              } } onNext={function (): void {
+                throw new Error("Function not implemented.");
+              } } onClose={function (): void {
+                throw new Error("Function not implemented.");
+              } }            />
             {selectedHighlightId && (
               <div className="mt-20">
                 <InlineComment
