@@ -36,6 +36,9 @@ interface CustomHighlight extends Highlight {
   type: 'text'; // Definindo como literal type 'text' ao invés de string
   riskType: string;
   explanation: string;
+  comment?: {
+    text: string;
+  };
 }
 
 // Componente do Container de Highlight
@@ -84,9 +87,6 @@ export function PDFViewer({
     const highlight: CustomHighlight = {
       id: issue.id,
       type: "text", // Sempre usar highlight de texto
-      content: {
-        text: issue.originalText || ''
-      },
       position: {
         boundingRect: {
           x1: issue.position.x1 * scale,
@@ -106,7 +106,8 @@ export function PDFViewer({
           height: (issue.position.y2 - issue.position.y1) * scale,
           pageNumber: issue.position.pageNumber
         }],
-        pageIndex: issue.position.pageNumber - 1,
+      },
+      content: {
         text: issue.originalText || ''
       },
       comment: {

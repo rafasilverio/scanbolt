@@ -9879,6 +9879,306 @@ Me avise se o erro persistir!
 
 ---
 
+_**User**_
+
+chat por favor verifique o @PDFHighlighter.tsx para que ele corrija os erros de Highlight crie uma interface highlith direto no código e não importe nada do /types/contract (removemos isso dele). Lembre-se que ele precisa estar de acordo com a lib react-pdf-highlither 
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+Vou atualizar o PDFHighlighter removendo a dependência do `/types/contract` e usando interfaces próprias alinhadas com a lib:
+
+```typescript:src/components/contracts/PDFHighlighter.tsx
+"use client";
+
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { 
+  PdfHighlighter, 
+  IHighlight,
+  Popup,
+  AreaHighlight
+} from "react-pdf-highlighter";
+import { cn } from "@/lib/utils";
+import { AlertTriangle, AlertCircle, Lightbulb } from "lucide-react";
+
+// Interface alinhada com react-pdf-highlighter
+interface Position {
+  boundingRect: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    width: number;
+    height: number;
+  };
+  rects: Array<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    width: number;
+    height: number;
+  }>;
+  pageNumber: number;
+}
+
+interface PDFHighlight extends IHighlight {
+  id: string;
+  position: Position;
+  content: {
+    text: string;
+  };
+  comment: {
+    type: 'critical' | 'warning' | 'improvement';
+    message: string;
+    suggestion: string;
+  };
+}
+
+interface PDFViewerProps {
+  url: string;
+  highlights: PDFHighlight[];
+  selectedHighlightId: string | null;
+  onHighlightClick: (highlight: PDFHighlight) => void;
+  zoom: number;
+}
+
+export function PDFViewer({
+  url,
+  highlights,
+  selectedHighlightId,
+  onHighlightClick,
+  zoom
+}: PDFViewerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hoveredHighlight, setHoveredHighlight] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.style.position = 'absolute';
+      containerRef.current.style.top = '0';
+      containerRef.current.style.left = '0';
+      containerRef.current.style.right = '0';
+      containerRef.current.style.bottom = '0';
+    }
+  }, []);
+
+  const renderHighlightPopup = (highlight: PDFHighlight) => (
+    <div className="bg-white shadow-lg rounded-lg p-2 max-w-[300px]">
+      <p className="text-sm font-medium text-gray-900">
+        {highlight.comment.message}
+      </p>
+    </div>
+  );
+
+  const renderHighlight = useCallback(
+    ({ position, id, ...highlight }: PDFHighlight, index: number) => {
+      const isSelected = id === selectedHighlightId;
+      const isHovered = id === hoveredHighlight;
+      
+      return (
+        <div
+          onMouseEnter={() => setHoveredHighlight(id)}
+          onMouseLeave={() => setHoveredHighlight(null)}
+        >
+          <AreaHighlight
+            highlight={{ position, id, ...highlight }}
+            onChange={() => {}}
+            className={cn(
+              "border-2 rounded transition-all duration-200",
+              highlight.comment.type === 'critical' && "border-red-500 bg-red-100/30",
+              highlight.comment.type === 'warning' && "border-yellow-500 bg-yellow-100/30",
+              highlight.comment.type === 'improvement' && "border-green-500 bg-green-100/30",
+              (isSelected || isHovered) && "bg-blue-100/50 scale-[1.02]"
+            )}
+          />
+          {isHovered && (
+            <Popup
+              popupContent={() => renderHighlightPopup(highlight as PDFHighlight)}
+              onMouseOver={() => setHoveredHighlight(id)}
+              onMouseOut={() => setHoveredHighlight(null)}
+            />
+          )}
+        </div>
+      );
+    },
+    [selectedHighlightId, hoveredHighlight]
+  );
+
+  const scrollToHighlight = useCallback(
+    (highlight: PDFHighlight) => {
+      onHighlightClick(highlight);
+    },
+    [onHighlightClick]
+  );
+
+  return (
+    <div className="h-full w-full relative">
+      <div ref={containerRef}>
+        <PdfHighlighter
+          pdfDocument={url}
+          enableAreaSelection={false}
+          highlights={highlights}
+          scrollRef={scrollToHighlight}
+          highlightTransform={(highlight, index) => 
+            renderHighlight(highlight as PDFHighlight, index)
+          }
+          onScrollChange={() => {
+            setHoveredHighlight(null);
+          }}
+          zoom={zoom / 100}
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+Principais mudanças:
+1. Removido import do `@/types/contract`
+2. Criado interface `Position` para tipagem correta
+3. Criado interface `PDFHighlight` estendendo `IHighlight`
+4. Atualizado todas as referências para usar `PDFHighlight`
+5. Mantido a compatibilidade com a lib react-pdf-highlighter
+6. Removido imports não utilizados
+
+Me avise se precisar de ajustes!
+
+---
+
+_**User**_
+
+estou olhando o nosso @PDFViewer.tsx e ele já contem a importação do "PdfHighlighter" do react-pdf-highliter-extended acredito que não precisamos do @PDFHighlighter.tsx . Você pode verificar por favor?
+
+---
+
+_**Assistant**_
+
+Sim, você está correto! Analisando o código:
+
+1. `PDFViewer.tsx` já importa e usa o `PdfHighlighter` da biblioteca `react-pdf-highlighter-extended`
+2. `PDFHighlighter.tsx` parece ser uma implementação redundante com funcionalidades similares
+
+Podemos remover com segurança o arquivo:
+```bash
+rm src/components/contracts/PDFHighlighter.tsx
+```
+
+O `PDFViewer.tsx` já cobre todas as funcionalidades necessárias e está integrado corretamente com a biblioteca estendida. Isso vai ajudar a:
+1. Evitar duplicação de código
+2. Manter consistência no uso da biblioteca
+3. Simplificar a manutenção
+
+Quer que eu procure outras referências ao `PDFHighlighter` no projeto para garantir que a remoção seja segura?
+
+---
+
+_**User**_
+
+For the code present, we get this error:
+```
+O literal de objeto pode especificar apenas propriedades conhecidas e 'pageIndex' não existe no tipo 'ScaledPosition'.
+```
+How can I resolve this? If you propose a fix, please make it concise.
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Remova a propriedade `pageIndex` pois ela não é aceita no tipo `ScaledPosition`. O `pageNumber` já é suficiente:
+
+```typescript:src/components/contracts/PDFViewer.tsx
+        }],
+        text: issue.originalText || ''
+      },
+```
+
+A biblioteca `react-pdf-highlighter-extended` usa apenas `pageNumber` para identificar a página, então podemos remover o `pageIndex` redundante.
+
+---
+
+_**User**_
+
+For the code present, we get this error:
+```
+O literal de objeto pode especificar apenas propriedades conhecidas e 'text' não existe no tipo 'ScaledPosition'.
+```
+How can I resolve this? If you propose a fix, please make it concise.
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+O `text` deve estar fora do objeto `position`. Vamos ajustar a estrutura:
+
+```typescript:src/components/contracts/PDFViewer.tsx
+        }],
+      },
+      content: {
+        text: issue.originalText || ''
+      },
+      comment: {
+```
+
+A propriedade `text` deve estar dentro de `content`, não dentro da `position`, conforme a estrutura esperada pela biblioteca.
+
+---
+
+_**User**_
+
+For the code present, we get this error:
+```
+O literal de objeto pode especificar apenas propriedades conhecidas e 'comment' não existe no tipo 'CustomHighlight'.
+```
+How can I resolve this? If you propose a fix, please make it concise.
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+Vamos atualizar a interface `CustomHighlight` para incluir a propriedade `comment`:
+
+```typescript:src/components/contracts/PDFViewer.tsx
+interface CustomHighlight extends Highlight {
+  type: 'text';
+  riskType: string;
+  explanation: string;
+  comment?: {
+    text: string;
+  };
+}
+```
+
+Isso deve resolver o erro ao adicionar o tipo `comment` na interface `CustomHighlight`.
+
+---
+
 
 
 ---
