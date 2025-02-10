@@ -56,8 +56,6 @@ export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: 
       open={isOpen} 
       onOpenChange={() => onCancel()}
       modal={true}
-      closeOnEsc={false}
-      closeOnOutsideClick={false}
     >
       <DialogContent 
         className="sm:max-w-xl bg-gradient-to-b from-indigo-950 to-indigo-900 text-white border-0"

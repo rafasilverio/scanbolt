@@ -10179,6 +10179,40 @@ Isso deve resolver o erro ao adicionar o tipo `comment` na interface `CustomHigh
 
 ---
 
+_**User**_
+
+For the code present, we get this error:
+```
+O tipo '{ children: Element; open: boolean; onOpenChange: () => void; modal: true; closeOnEsc: boolean; closeOnOutsideClick: boolean; }' não pode ser atribuído ao tipo 'IntrinsicAttributes & DialogProps'.
+  A propriedade 'closeOnEsc' não existe no tipo 'IntrinsicAttributes & DialogProps'.
+```
+How can I resolve this? If you propose a fix, please make it concise.
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+Remova as props não suportadas pelo Dialog. Use apenas as props padrão:
+
+```typescript:src/components/contracts/upload/ProcessingModal.tsx
+      open={isOpen} 
+      onOpenChange={() => onCancel()}
+      modal={true}
+    >
+```
+
+O componente Dialog do shadcn/ui não aceita `closeOnEsc` e `closeOnOutsideClick`. O comportamento de fechar pode ser controlado através do `onOpenChange`.
+
+---
+
 
 
 ---
