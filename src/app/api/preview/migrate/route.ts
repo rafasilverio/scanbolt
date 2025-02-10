@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { processContractInBackground } from '@/app/api/contracts/upload/route';
+import { processContractInBackground } from '@/lib/process';
 import { Blob, File } from 'fetch-blob/from.js';
 import { Contract, ContractIssue, SuggestedClause } from '@/types/contract';
 

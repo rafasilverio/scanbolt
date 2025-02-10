@@ -8685,7 +8685,41 @@ export function Header() {
 
 
 Principais mudanças:
-1. Adicion
+1. Adicionado função `handleSignOut` dedicada
+2. Uso do `signOut` com opções explícitas
+3. Adicionado redirecionamento forçado após o signOut
+4. Adicionado tratamento de erro
+5. Fallback com `window.location.href` em caso de falha
+6. Uso do `router.refresh()` para garantir atualização do estado
+7. Redirecionamento explícito para página de login
+
+Isso deve garantir que:
+- O usuário seja completamente deslogado
+- Seja sempre redirecionado para a página de login
+- Não fique preso na dashboard
+- O estado da aplicação seja limpo corretamente
+
+Me avise se ainda encontrar algum problema com o logout!
+
+---
+
+_**User**_
+
+hey chat eu estou compilando meu código para o vercel e deu este erro:
+
+"info - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+Failed to compile.
+src/app/api/contracts/upload/route.ts
+Type error: Route "src/app/api/contracts/upload/route.ts" does not match the required types of a Next.js Route.
+"processContractInBackground" is not a valid Route export field."
+
+Por favor analise com cuidado como posso corrigi-lo sem quebrar meu código
+
+---
+
+_**Assistant**_
+
+
 
 ---
 

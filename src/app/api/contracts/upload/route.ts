@@ -13,6 +13,7 @@ import {
 } from '@/types/contract';
 import PDFParser from 'pdf2json';
 import { analyzeContract } from '@/lib/ai';
+import { processContractInBackground } from '@/lib/process';
 
 export const maxDuration = 300; // Aumentado para 5 minutos
 export const dynamic = 'force-dynamic';
@@ -219,70 +220,5 @@ export async function POST(req: NextRequest) {
       success: false, 
       error: 'Failed to process contract' 
     }, { status: 500 });
-  }
-}
-
-export async function processContractInBackground(contractId: string, file: File, userId: string) {
-  try {
-    // 1. Upload do arquivo para o Supabase
-    const sanitizedFileName = sanitizeFileName(file.name);
-    const uniqueFileName = `${Date.now()}-${sanitizedFileName}`;
-    const buffer = await file.arrayBuffer();
-
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('contracts')
-      .upload(uniqueFileName, buffer, {
-        contentType: file.type,
-        upsert: false
-      });
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('contracts')
-      .getPublicUrl(uploadData.path);
-
-    // 2. Extrair texto e coordenadas
-    const { text, numPages, textCoordinates } = await extractTextContent(file);
-
-    // 3. Primeira atualização: URL do arquivo e conteúdo
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        fileUrl: publicUrl,
-        content: text,
-        numPages: numPages
-      }
-    });
-
-    // 4. Análise do contrato
-    const analysisResult = await analyzeContract(text, textCoordinates);
-
-    // 5. Atualização final com resultados
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        issues: JSON.parse(JSON.stringify(analysisResult.issues)),
-        suggestedClauses: JSON.parse(JSON.stringify(analysisResult.suggestedClauses)),
-        status: "under_review",
-        metadata: {
-          pageCount: numPages,
-          updatedAt: new Date()
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Background processing error:', error);
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        status: "error",
-        metadata: {
-          error: 'Failed to process contract',
-          updatedAt: new Date()
-        }
-      }
-    });
   }
 }
