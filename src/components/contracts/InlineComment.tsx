@@ -3,8 +3,19 @@
 import { motion } from "framer-motion";
 import { X, ArrowRight, AlertTriangle, AlertCircle, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Highlight } from "@/types/contract";
 import { useEffect, useState } from "react";
+
+export interface Highlight {
+  id: string;
+  content: {
+    text: string;
+  };
+  comment?: {
+    type: 'critical' | 'warning' | 'improvement';
+    message: string;
+    suggestion: string;
+  };
+}
 
 interface InlineCommentProps {
   change: Highlight;

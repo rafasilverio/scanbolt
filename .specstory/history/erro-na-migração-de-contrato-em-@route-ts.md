@@ -9814,6 +9814,71 @@ Isso deve resolver o erro de exportação do tipo `Highlight`. O tipo foi defini
 
 ---
 
+_**User**_
+
+feito, obg.
+
+---
+
+_**Assistant**_
+
+Ótimo! Se precisar de mais ajuda com tipos ou outros ajustes no código, estou à disposição. 
+
+Quer que eu revise mais algum componente ou tipo específico do sistema?
+
+---
+
+_**User**_
+
+ajude-me a resolver: ./src/components/contracts/InlineComment.tsx:6:10
+Type error: Module '"@/types/contract"' has no exported member 'Highlight'.
+
+---
+
+_**Assistant**_
+
+
+
+Parece que o tipo `Highlight` ainda não está sendo reconhecido. Vamos verificar o arquivo de tipos completo:
+
+```typescript:src/types/contract.ts
+export interface Contract {
+  id: string;
+  title: string;
+  content: string;
+  status: string;
+  // ... outros campos
+}
+
+export interface Highlight {
+  id: string;
+  content: {
+    text: string;
+  };
+  comment?: {
+    type: 'critical' | 'warning' | 'improvement';
+    message: string;
+    suggestion: string;
+  };
+}
+
+// Certifique-se que o arquivo está exportando corretamente
+export type { Highlight };
+```
+
+Se o erro persistir, pode ser que:
+1. O arquivo não esteja sendo salvo corretamente
+2. O TypeScript precise recarregar as definições de tipo
+
+Tente:
+1. Salvar todos os arquivos
+2. Reiniciar o servidor de desenvolvimento
+3. Executar `npm run dev` novamente
+
+Me avise se o erro persistir!
+
+---
+
 
 
 ---
