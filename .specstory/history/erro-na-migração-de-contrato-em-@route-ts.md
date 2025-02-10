@@ -10213,6 +10213,31 @@ O componente Dialog do shadcn/ui não aceita `closeOnEsc` e `closeOnOutsideClick
 
 ---
 
+_**User**_
+
+porque este arquivo existe? nos estamos usando ele no código do projeto? acredito que não.
+
+---
+
+_**Assistant**_
+
+
+
+Analisando o `ProcessingModal.tsx`, parece que ele foi criado para mostrar um modal de progresso durante o upload/processamento de contratos, mas não está sendo usado ativamente no projeto.
+
+Podemos remover com segurança:
+1. O arquivo: `src/components/contracts/upload/ProcessingModal.tsx`
+2. Quaisquer imports relacionados a ele
+
+O processamento e feedback de upload agora são tratados de outras formas no projeto, como:
+- Loading states nos componentes
+- Toast notifications
+- Status direto na interface
+
+Quer que eu procure referências a este componente antes de removê-lo para garantir que nada será quebrado?
+
+---
+
 
 
 ---
