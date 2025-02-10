@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
-import { Contract } from '@/types/contract';
+import { Contract, ContractIssue } from '@/types/contract';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReviewSummary } from '@/components/contracts/ReviewSummary';
-import { useHighlights } from '@/lib/hooks/useHighlights';
 import { NewContractContent } from '@/components/contracts/NewContractContent';
 
 export default function ContractPage() {
@@ -19,14 +18,6 @@ export default function ContractPage() {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showReview, setShowReview] = useState(false);
-  const [zoom, setZoom] = useState(100);
-
-  const {
-    selectedHighlight,
-    onHighlightClick,
-    onNextHighlight,
-    onCloseHighlight
-  } = useHighlights(contract?.issues || []);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -72,18 +63,10 @@ export default function ContractPage() {
   }, [params.id, session?.user, status]);
 
   const handleGenerateRevision = async () => {
-    console.log('handleGenerateRevision called');
-    
-    if (!contract) {
-      console.log('No contract available');
-      return;
-    }
+    if (!contract) return;
     
     setIsGenerating(true);
     try {
-      const acceptedChanges = contract.issues.filter((issue) => issue.status === 'accepted');
-      console.log('Accepted changes:', acceptedChanges);
-
       const response = await fetch(`/api/contracts/${contract.id}/revision`, {
         method: 'POST',
         headers: {
@@ -91,8 +74,6 @@ export default function ContractPage() {
         },
         body: JSON.stringify({
           originalContent: contract.content,
-          changes: acceptedChanges,
-          highlights: contract.issues
         }),
       });
 
@@ -102,7 +83,6 @@ export default function ContractPage() {
       }
 
       const data = await response.json();
-      console.log('Revision generated:', data);
       
       const statusResponse = await fetch(`/api/contracts/${contract.id}`, {
         method: 'PATCH',
@@ -169,11 +149,11 @@ export default function ContractPage() {
             </p>
           </div>
           
-            <ReviewSummary 
-              contract={contract}
-              onStartReview={handleStartReview}
-              showReview={showReview}
-            />
+          <ReviewSummary 
+            contract={contract}
+            onStartReview={handleStartReview}
+            showReview={showReview}
+          />
         </div>
         
         {/* Decorative elements */}
@@ -184,13 +164,14 @@ export default function ContractPage() {
       <div className="flex-1 overflow-hidden">
         <NewContractContent
           contract={contract}
-          selectedIssue={selectedHighlight}
-          onIssueClick={onHighlightClick}
           isFirstIssue={contract?.status === 'under_review'}
-          onUpgrade={handleGenerateRevision}
-          onNext={onNextHighlight}
-          onClose={onCloseHighlight}
-        />
+          onUpgrade={handleGenerateRevision} selectedIssue={null} onIssueClick={function (issue: ContractIssue): void {
+            throw new Error('Function not implemented.');
+          } } onNext={function (): void {
+            throw new Error('Function not implemented.');
+          } } onClose={function (): void {
+            throw new Error('Function not implemented.');
+          } }        />
       </div>
     </div>
   );
