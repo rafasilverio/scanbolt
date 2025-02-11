@@ -11270,6 +11270,118 @@ Quer que eu mostre o código específico de algum desses arquivos para analisarm
 
 ---
 
+_**User**_
+
+For the code present, we get this error:
+```
+O tipo '{ id: any; userId: any; fileUrl: any; fileName: any; title: any; numPages: any; createdAt: Date; updatedAt: Date; fileType: any; content: any; issues: any; suggestedClauses: never[]; status: string; metadata: { ...; }; }' não tem as propriedades a seguir do tipo '{ id: string; title: string; content: string; status: string; fileUrl: string; fileName: string; fileType: string; userId: string; numPages: number; createdAt: Date; updatedAt: Date; highlights: JsonValue; ... 4 more ...; metadata: JsonValue; }': highlights, changes, pdfPositions
+```
+How can I resolve this? If you propose a fix, please make it concise.
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+
+
+Vamos atualizar o `convertToNewFormat` para a nova estrutura do `Contract`:
+
+```typescript:src/lib/utils/contract.ts
+import { Contract } from "@/types/contract";
+
+export function convertToNewFormat(oldContract: any): Contract {
+  return {
+    id: oldContract.id,
+    userId: oldContract.userId,
+    fileUrl: oldContract.fileUrl,
+    fileName: oldContract.fileName,
+    fileType: oldContract.fileType,
+    content: oldContract.content,
+    issues: oldContract.issues || [],
+    suggestedClauses: oldContract.suggestedClauses || [],
+    status: mapOldStatus(oldContract.status),
+    metadata: {
+      pageCount: oldContract.numPages || 1,
+      createdAt: new Date(oldContract.createdAt),
+      updatedAt: new Date(oldContract.updatedAt)
+    }
+  };
+}
+```
+
+
+Removido campos obsoletos (highlights, changes, pdfPositions) e atualizado para a nova estrutura do `Contract`.
+
+---
+
+_**User**_
+
+ajude-me a resolver o deploy 
+
+"Error occurred prerendering page "/pdf-test". Read more: https://nextjs.org/docs/messages/prerender-error
+TypeError: Promise.withResolvers is not a function
+at 88579 (/vercel/path0/.next/server/chunks/5746.js:3:60024)
+at t (/vercel/path0/.next/server/webpack-runtime.js:1:143)
+at 47463 (/vercel/path0/.next/server/chunks/2196.js:5:28838)
+at t (/vercel/path0/.next/server/webpack-runtime.js:1:143)
+at 44544 (/vercel/path0/.next/server/app/pdf-test/page.js:1:8390)
+at t (/vercel/path0/.next/server/webpack-runtime.js:1:143)
+at 86334 (/vercel/path0/.next/server/app/pdf-test/page.js:1:2697)
+at Object.t [as require] (/vercel/path0/.next/server/webpack-runtime.js:1:143)
+at require (/vercel/path0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:16:18678)
+at i (/vercel/path0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:88294)
+✓ Generating static pages (16/16)
+> Export encountered errors on following paths:
+/pdf-test/page: /pdf-test
+Error: Command "npm run build" exited with 1"
+
+podemos remover o pdf-test?
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Sim, podemos remover o `pdf-test` já que parece ser uma página de teste que não é mais necessária. Vamos remover:
+
+1. Remover a página:
+```bash
+rm -rf src/app/pdf-test
+```
+
+2. Se houver, remover quaisquer imports ou referências a esta página em outros arquivos.
+
+Esta página era provavelmente usada para testar a funcionalidade do PDF viewer, mas agora que temos a implementação real em `contracts/[id]`, não precisamos mais dela.
+
+Quer que eu procure por outras referências ao `pdf-test` antes de removermos?
+
+---
+
+_**User**_
+
+sim, por favor
+
+---
+
+_**Assistant**_
+
+
+
+---
+
 
 
 ---
