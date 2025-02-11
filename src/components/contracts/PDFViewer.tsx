@@ -140,14 +140,14 @@ export function PDFViewer({
         </PdfLoader>
       </div>
 
-      <div className="absolute bottom-4 right-4 z-10 flex gap-2">
+      {/* <div className="absolute bottom-4 right-4 z-10 flex gap-2">
         <Button onClick={onClose} variant="outline">
           Close
         </Button>
         <Button onClick={isFirstIssue ? onNext : onUpgrade}>
           {isFirstIssue ? 'Next' : 'Upgrade'}
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 }

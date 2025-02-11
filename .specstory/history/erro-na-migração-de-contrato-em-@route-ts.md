@@ -11380,6 +11380,786 @@ _**Assistant**_
 
 
 
+
+
+
+
+Vou procurar por todas as referências ao `pdf-test` no projeto:
+
+1. Procurando por imports e referências:
+```typescript
+// Procurando por:
+- "pdf-test"
+- "/pdf-test"
+- "PdfTest"
+```
+
+2. Possíveis locais:
+- Arquivos de rota
+- Links de navegação
+- Componentes de teste
+- Configurações
+
+3. Encontrei em:
+```typescript
+// src/app/pdf-test/page.tsx - arquivo principal a ser removido
+// src/app/pdf-test/layout.tsx - se existir
+```
+
+Podemos remover com segurança:
+```bash
+rm -rf src/app/pdf-test
+```
+
+Não encontrei outras referências a esta página no projeto. A remoção deve resolver o erro de deploy sem afetar outras funcionalidades.
+
+Quer que eu proceda com a remoção?
+
+---
+
+_**User**_
+
+Chat me ajude, eu fiz o deploy pro vercel e funcionou.
+
+Mas ao fazer o @migrate o erro no console apareceu 'Migration error: Error: Contract processing timeout
+"
+
+---
+
+_**Assistant**_
+
+
+
+O erro "Contract processing timeout" durante a migração geralmente ocorre quando o processamento do contrato leva mais tempo que o limite permitido. Vamos analisar algumas possíveis soluções:
+
+1. Verificar o timeout da migração no Prisma:
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Aumentar o timeout se necessário
+  previewFeatures = ["extendedWhereUnique"]
+}
+```
+
+2. Verificar se há um limite de tempo na rota de processamento:
+```typescript
+// src/app/api/contracts/route.ts
+export const maxDuration = 300; // aumentar para 300 segundos se necessário
+```
+
+3. Verificar se há um limite no Vercel:
+- Vá para as configurações do projeto no Vercel
+- Procure por "Functions" ou "Serverless Function Configuration"
+- Aumente o "Maximum Execution Duration"
+
+Qual dessas abordagens você gostaria de tentar primeiro?
+
+---
+
+_**User**_
+
+o prisma está assim
+
+```
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Vamos atualizar o `schema.prisma` para lidar com o timeout:
+
+```prisma:prisma/schema.prisma
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  // Adicionar configuração de timeout
+  engineConfig = {
+    previewFeatures = ["extendedWhereUnique"]
+    transactionTimeout = "300000" // 5 minutos em milissegundos
+  }
+}
+```
+
+
+
+Depois execute:
+```bash
+npx prisma generate
+npx prisma migrate reset --force
+```
+
+
+Isso deve:
+1. Aumentar o timeout para 5 minutos
+2. Regenerar o cliente Prisma
+3. Resetar e reexecutar as migrações
+
+Se o erro persistir, podemos:
+1. Aumentar ainda mais o timeout
+2. Verificar os logs detalhados da migração
+3. Verificar se há problemas específicos com algum contrato
+
+Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+help to fix
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Desculpe pelo erro. Vamos simplificar o `schema.prisma` e tentar outra abordagem:
+
+```prisma:prisma/schema.prisma
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema", "extendedWhereUnique"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+```
+
+
+
+Em vez de configurar o timeout no schema, vamos:
+
+1. Configurar o timeout na conexão do Prisma:
+```typescript:src/lib/prisma.ts
+import { PrismaClient } from '@prisma/client'
+
+const prismaClientSingleton = () => {
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL
+      }
+    },
+    // Aumentar timeout para 5 minutos
+    log: ['query', 'error', 'warn'],
+    engineConfig: {
+      connectionTimeout: 300000,
+    }
+  })
+}
+```
+
+
+2. Ou aumentar o timeout nas configurações do Vercel:
+- Settings > Functions > General > Maximum Execution Duration: 300 seconds
+
+Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+eu aumentei no vercel, mas no plano free é apenas 60 seconds, coloquei ele
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Entendi. Com o limite de 60 segundos no plano free do Vercel, precisamos otimizar o processamento. Sugestões:
+
+1. Dividir o processamento em partes menores:
+```typescript
+// Processar em lotes menores
+const BATCH_SIZE = 5;
+```
+
+2. Usar webhooks para processamento assíncrono:
+- Iniciar o processamento
+- Retornar status imediatamente
+- Continuar processamento em background
+- Notificar quando completar
+
+3. Implementar um sistema de fila:
+- Processar um contrato por vez
+- Evitar timeout
+- Manter track do progresso
+
+Qual abordagem você gostaria de explorar primeiro? Posso mostrar a implementação de qualquer uma delas.
+
+---
+
+_**User**_
+
+qual vc recomenda?
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Para o caso específico, recomendo a abordagem de Webhooks com processamento assíncrono, pois:
+
+1. É mais escalável
+2. Evita timeouts
+3. Melhor experiência do usuário
+4. Mais confiável
+
+Implementação sugerida:
+
+```typescript:src/app/api/contracts/upload/route.ts
+export async function POST(req: Request) {
+  try {
+    // 1. Receber arquivo e dados iniciais
+    const data = await req.formData();
+    const file = data.get('file') as File;
+    
+    // 2. Salvar contrato inicial com status 'analyzing'
+    const contract = await prisma.contract.create({
+      data: {
+        status: 'analyzing',
+        // ... outros dados iniciais
+      }
+    });
+
+    // 3. Iniciar processamento assíncrono
+    await fetch('/api/queue/process-contract', {
+      method: 'POST',
+      body: JSON.stringify({ contractId: contract.id }),
+    });
+
+    // 4. Retornar imediatamente com o ID
+    return Response.json({ 
+      id: contract.id,
+      status: 'analyzing',
+      message: 'Contract processing started'
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return Response.json({ error: 'Upload failed' }, { status: 500 });
+  }
+}
+```
+
+```typescript:src/app/api/queue/process-contract/route.ts
+export const maxDuration = 60; // Vercel limit
+
+export async function POST(req: Request) {
+  const { contractId } = await req.json();
+
+  try {
+    // 1. Processar em etapas
+    await processContractInStages(contractId);
+
+    // 2. Atualizar status
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: { status: 'under_review' }
+    });
+
+    // 3. Notificar conclusão (opcional)
+    // await notifyProcessingComplete(contractId);
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error('Processing error:', error);
+    
+    // Atualizar status com erro
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: { 
+        status: 'error',
+        metadata: {
+          error: error.message
+        }
+      }
+    });
+
+    return Response.json({ error: 'Processing failed' }, { status: 500 });
+  }
+}
+
+async function processContractInStages(contractId: string) {
+  // 1. Extrair texto
+  await extractText(contractId);
+  
+  // 2. Analisar riscos
+  await analyzeRisks(contractId);
+  
+  // 3. Gerar sugestões
+  await generateSuggestions(contractId);
+}
+```
+
+```typescript:src/components/contracts/upload/UploadForm.tsx
+export function UploadForm() {
+  const [status, setStatus] = useState('idle');
+  
+  const handleUpload = async (file: File) => {
+    try {
+      setStatus('uploading');
+      
+      // 1. Enviar arquivo
+      const response = await uploadContract(file);
+      const { id } = await response.json();
+      
+      // 2. Redirecionar para página de status
+      router.push(`/contracts/${id}`);
+      
+    } catch (error) {
+      setStatus('error');
+      toast.error('Upload failed');
+    }
+  };
+
+  return (
+    // ... UI com feedback de status
+  );
+}
+```
+
+Benefícios:
+1. Usuário recebe feedback imediato
+2. Processamento não é limitado por timeout
+3. Sistema mais resiliente a erros
+4. Melhor UX com status em tempo real
+
+Quer que eu detalhe alguma parte específica da implementação?
+
+---
+
+_**User**_
+
+antes de implementar eu testei fazer o upload sem ser no migrate, agora direto na dashboard e também recebi o erro "Analysis timeout. Please try again."
+
+Por favor, vamos analisar com calma o @route.ts @route.ts que fazem o uso do @ContractUploader.tsx para receber o arquivo e fazer a analise.
+
+Por favor olhe com calma, arquivo por arquivo e vamos implementar a solução mais simples para este problema, sem que a gente remova funções importantes do sistema ou gere erros desnecessários.
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Analisando os arquivos com calma:
+
+1. `ContractUploader.tsx`:
+```typescript
+const maxAttempts = 60; // 2 minutos máximo (com 2s de intervalo)
+```
+O timeout está muito curto para análise completa.
+
+2. `upload/route.ts`:
+```typescript
+// Já está correto:
+// 1. Cria contrato com status "analyzing"
+// 2. Inicia processamento em background
+// 3. Retorna resposta imediata
+```
+
+3. `migrate/route.ts`:
+```typescript
+// Mesmo padrão do upload
+processContractInBackground(contract.id, file, session.user.id);
+```
+
+O problema está no tempo de processamento vs. timeout. Sugestão de solução:
+
+1. Primeiro, aumentar o tempo de espera no `ContractUploader.tsx`:
+```typescript:src/components/contracts/upload/ContractUploader.tsx
+const maxAttempts = 150; // 5 minutos (com 2s de intervalo)
+
+const waitForAnalysis = async (contractId: string) => {
+  let attempts = 0;
+  
+  const checkStatus = async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/status`);
+      const data = await response.json();
+      
+      // Atualizar mensagens de progresso
+      switch (data.status) {
+        case 'analyzing':
+          setProgress(`Analyzing contract... (${Math.round((attempts/150) * 100)}%)`);
+          return false;
+        case 'under_review':
+          setProgress('Analysis complete!');
+          router.push(`/contracts/${contractId}`);
+          return true;
+        case 'error':
+          throw new Error(data.error || 'Contract analysis failed');
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error('Status check error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to process contract');
+      setUploading(false);
+      return true;
+    }
+  };
+
+  while (attempts < maxAttempts) {
+    const isDone = await checkStatus();
+    if (isDone) break;
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    attempts++;
+  }
+
+  if (attempts >= maxAttempts) {
+    setError('Analysis is taking longer than expected. You can check the status later.');
+    router.push(`/contracts/${contractId}`);
+  }
+};
+```
+
+2. Melhorar o feedback no caso de timeout:
+- Em vez de mostrar erro
+- Redirecionar para a página do contrato
+- Usuário pode ver o status lá
+
+3. Manter o processamento em background:
+```typescript:src/lib/process.ts
+export async function processContractInBackground(
+  contractId: string, 
+  file: File, 
+  userId: string
+) {
+  try {
+    // 1. Upload do arquivo
+    // 2. Extração do texto
+    // 3. Análise do contrato
+    // 4. Atualização do status
+  } catch (error) {
+    console.error('Background processing error:', error);
+    
+    // Atualizar contrato com erro
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        status: 'error',
+        metadata: {
+          error: error instanceof Error ? error.message : 'Processing failed'
+        }
+      }
+    });
+  }
+}
+```
+
+Esta solução:
+1. Mantém a funcionalidade existente
+2. Aumenta o tempo de espera
+3. Melhora o feedback ao usuário
+4. Não interrompe o processamento em caso de timeout
+5. Permite verificar o status posteriormente
+
+Quer que eu implemente alguma dessas mudanças primeiro?
+
+---
+
+_**User**_
+
+temos que mudar algo no @route.ts tbm?
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+Sim, vamos ajustar o `migrate/route.ts` para melhor tratamento de erros e feedback:
+
+```typescript:src/app/api/preview/migrate/route.ts
+export async function POST(request: Request) {
+  try {
+    // Verificar autenticação
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Obter tempId do corpo da requisição
+    const { tempId } = await request.json();
+    if (!tempId) {
+      return NextResponse.json({ error: 'Missing tempId' }, { status: 400 });
+    }
+
+    // Buscar dados do preview
+    const { data: previewCache, error: previewError } = await supabaseAdmin
+      .from('preview_cache')
+      .select('*')
+      .eq('id', tempId)
+      .single();
+
+    if (previewError || !previewCache) {
+      console.error('Preview cache error:', previewError);
+      return NextResponse.json(
+        { error: 'Preview not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verificar se os dados necessários existem
+    if (!previewCache.data || !previewCache.data.fileName) {
+      console.error('Invalid preview data:', previewCache);
+      return NextResponse.json(
+        { error: 'Invalid preview data' },
+        { status: 400 }
+      );
+    }
+
+    try {
+      // Criar contrato seguindo exatamente a interface Contract
+      const contract = await prisma.contract.create({
+        data: {
+          userId: session.user.id,
+          fileUrl: '', // Será atualizado durante o processamento
+          fileName: previewCache.data.fileName,
+          title: previewCache.data.fileName,
+          fileType: previewCache.data.fileType || 'application/pdf',
+          content: previewCache.data.content || '',
+          issues: [], // Array vazio inicial
+          suggestedClauses: [], // Array vazio inicial
+          status: 'analyzing',
+          metadata: {
+            pageCount: previewCache.data.metadata?.pageCount || 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            originalFileName: previewCache.data.fileName,
+            fileSize: previewCache.data.metadata?.fileSize || 0,
+          }
+        }
+      });
+
+      // Iniciar processamento em background
+      if (previewCache.data.content) {
+        const fileBuffer = Buffer.from(previewCache.data.content, 'base64');
+        const file = new File([fileBuffer], previewCache.data.fileName, {
+          type: previewCache.data.fileType || 'application/pdf'
+        });
+        
+        // Processar em background e não esperar a conclusão
+        processContractInBackground(contract.id, file, session.user.id)
+          .catch(error => {
+            console.error('Background processing error:', error);
+            // Não rejeitar a promise principal
+          });
+
+        // Limpar cache após criar o contrato
+        await supabaseAdmin
+          .from('preview_cache')
+          .delete()
+          .eq('id', tempId);
+
+        // Retornar sucesso imediatamente
+        return NextResponse.json({
+          success: true,
+          contractId: contract.id,
+          status: 'analyzing'
+        });
+
+      } else {
+        throw new Error('No content found in preview cache');
+      }
+
+    } catch (error) {
+      console.error('Contract creation error:', error);
+      return NextResponse.json(
+        { error: 'Failed to create contract' },
+        { status: 500 }
+      );
+    }
+
+  } catch (error) {
+    console.error('Migration error:', error);
+    return NextResponse.json(
+      { 
+        error: error instanceof Error ? error.message : 'Failed to migrate contract',
+        details: error instanceof Error ? error.stack : undefined
+      },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+```
+
+
+
+Principais mudanças:
+1. Separação clara entre criação do contrato e processamento
+2. Processamento em background não bloqueia a resposta
+3. Melhor tratamento de erros em diferentes níveis
+4. Limpeza do cache após criar o contrato
+5. Retorno imediato com status 'analyzing'
+
+Isso deve ajudar a:
+1. Evitar timeouts
+2. Dar feedback mais rápido ao usuário
+3. Manter o processamento mesmo se a conexão cair
+4. Melhor rastreamento de erros
+
+Me avise se precisar de mais ajustes!
+
+---
+
+_**User**_
+
+tem algo a mais que podemos fazer no @route.ts para ele não dar timeout?
+
+Ainda está lento
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+Sim, vamos otimizar o `upload/route.ts` para ser mais rápido e evitar timeout:
+
+```typescript:src/app/api/contracts/upload/route.ts
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User not authenticated' 
+      }, { status: 401 });
+    }
+
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      throw new Error('No file provided');
+    }
+
+    // 1. Criar contrato imediatamente com dados mínimos
+    const contract = await prisma.contract.create({
+      data: {
+        userId: userId,
+        fileUrl: '', // será atualizado depois
+        fileName: file.name,
+        title: file.name,
+        fileType: file.type,
+        content: '',  // será extraído depois
+        issues: [],
+        suggestedClauses: [],
+        status: "analyzing",
+        metadata: {
+          pageCount: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          originalFileName: file.name,
+          fileSize: file.size
+        }
+      }
+    });
+
+    // 2. Iniciar processamento em background sem esperar
+    Promise.resolve().then(() => {
+      processContractInBackground(contract.id, file, userId).catch(error => {
+        console.error('Background processing error:', error);
+      });
+    });
+
+    // 3. Retornar resposta imediatamente
+    return NextResponse.json({
+      success: true,
+      contract: {
+        id: contract.id,
+        status: "analyzing"
+      }
+    });
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to process contract' 
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+```
+
+
+
+Principais otimizações:
+1. Criação do contrato com dados mínimos
+2. Processamento totalmente assíncrono
+3. Resposta imediata após criar o contrato
+4. Sem esperar upload para Supabase
+5. Sem esperar extração de texto
+6. Sem esperar análise do OpenAI
+
+O processamento pesado acontece em background, enquanto o usuário já recebe o ID do contrato e pode acompanhar o status.
+
+Me avise se ainda estiver lento!
+
 ---
 
 

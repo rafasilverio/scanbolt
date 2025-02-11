@@ -43,34 +43,29 @@ export function ContractUploader() {
 
   const waitForAnalysis = async (contractId: string) => {
     let attempts = 0;
-    const maxAttempts = 60; // 2 minutos máximo (com 2s de intervalo)
+    const maxAttempts = 150; // 5 minutos (com 2s de intervalo)
     
     const checkStatus = async (): Promise<boolean> => {
       try {
         const response = await fetch(`/api/contracts/${contractId}/status`);
         const data = await response.json();
         
-        if (data.status === 'under_review' && 
-            Array.isArray(data.issues) && 
-            data.issues.length > 0) {
-          setProgress('Analysis complete!');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          router.push(`/contracts/${contractId}`);
-          return true;
-        }
-        
         switch (data.status) {
           case 'analyzing':
-            setProgress('Analyzing contract...');
+            setProgress(`Analyzing contract... (${Math.round((attempts/150) * 100)}%)`);
             return false;
+          case 'under_review':
+            setProgress('Analysis complete!');
+            router.push(`/contracts/${contractId}`);
+            return true;
           case 'error':
-            throw new Error('Contract analysis failed');
+            throw new Error(data.error || 'Contract analysis failed');
           default:
             return false;
         }
       } catch (error) {
         console.error('Status check error:', error);
-        setError('Failed to process contract');
+        setError(error instanceof Error ? error.message : 'Failed to process contract');
         setUploading(false);
         return true;
       }
@@ -85,8 +80,8 @@ export function ContractUploader() {
     }
 
     if (attempts >= maxAttempts) {
-      setError('Analysis timeout. Please try again.');
-      setUploading(false);
+      setError('Analysis is taking longer than expected. You can check the status later.');
+      router.push(`/contracts/${contractId}`);
     }
   };
 

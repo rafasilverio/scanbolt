@@ -131,7 +131,11 @@ async function extractTextContent(file: File): Promise<{
     };
   }
 
-export async function processContractInBackground(contractId: string, file: File, userId: string) {
+export async function processContractInBackground(
+  contractId: string, 
+  file: File, 
+  userId: string
+) {
   try {
     // 1. Upload do arquivo para o Supabase
     const sanitizedFileName = sanitizeFileName(file.name);
@@ -183,13 +187,14 @@ export async function processContractInBackground(contractId: string, file: File
 
   } catch (error) {
     console.error('Background processing error:', error);
+    
+    // Atualizar contrato com erro
     await prisma.contract.update({
       where: { id: contractId },
       data: {
-        status: "error",
+        status: 'error',
         metadata: {
-          error: 'Failed to process contract',
-          updatedAt: new Date()
+          error: error instanceof Error ? error.message : 'Processing failed'
         }
       }
     });

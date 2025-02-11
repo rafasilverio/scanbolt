@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const openai = new OpenAI();
 
-export const maxDuration = 60; // Set max duration to Vercel default
+export const maxDuration = 300; // Set max duration to Vercel default
 export const dynamic = 'force-dynamic';
 
 function recalculatePositions(
