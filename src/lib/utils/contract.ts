@@ -1,4 +1,4 @@
-import { Contract } from "@prisma/client";
+import { Contract } from "@/types/contract";
 
 export function convertToNewFormat(oldContract: any): Contract {
   return {
@@ -8,32 +8,18 @@ export function convertToNewFormat(oldContract: any): Contract {
     fileName: oldContract.fileName,
     fileType: oldContract.fileType,
     content: oldContract.content,
-    issues: oldContract.highlights?.map((h: any) => ({
-      id: h.id,
-      type: h.type,
-      originalText: h.content?.text || '',
-      newText: h.comment?.suggestion || '',
-      explanation: h.comment?.message || '',
-      riskType: determineRiskType(h.type),
-      status: 'pending',
-      position: {
-        startIndex: h.startIndex || 0,
-        endIndex: h.endIndex || 0,
-        pageNumber: h.position?.pageNumber || 1,
-        pdfPosition: h.position
-      }
-    })) || [],
-    suggestedClauses: [],
+    issues: oldContract.issues || [],
+    suggestedClauses: oldContract.suggestedClauses || [],
     status: mapOldStatus(oldContract.status),
     metadata: {
       pageCount: oldContract.numPages || 1,
-      createdAt: oldContract.createdAt,
-      updatedAt: oldContract.updatedAt
+      createdAt: new Date(oldContract.createdAt),
+      updatedAt: new Date(oldContract.updatedAt)
     }
   };
 }
 
-function determineRiskType(type: string): RiskType {
+function determineRiskType(type: string): 'legal' | 'compliance' | 'operational' {
   switch (type) {
     case 'critical':
       return 'legal';

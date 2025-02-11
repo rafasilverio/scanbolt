@@ -11173,6 +11173,101 @@ _**Assistant**_
 
 
 
+
+
+Vou procurar por todas as referências ao `contract-store` no projeto:
+
+1. Procurando por imports:
+```typescript
+import { useContractStore } from '@/lib/store/contract-store';
+```
+
+2. Encontrei uso em:
+```typescript
+// src/components/contracts/ContractViewer.tsx
+const { contract: storeContract, setContract } = useContractStore();
+
+// src/components/contracts/NewContractContent.tsx
+const { contract } = useContractStore();
+
+// src/app/(protected)/contracts/[id]/page.tsx
+const { setContract } = useContractStore();
+```
+
+Para remover com segurança, precisamos:
+
+1. Em `ContractViewer.tsx`:
+- Substituir por estado local (useState)
+- Passar o contrato via props
+
+2. Em `NewContractContent.tsx`:
+- Receber o contrato via props do componente pai
+
+3. Em `contracts/[id]/page.tsx`:
+- Gerenciar o estado do contrato localmente
+- Passar os dados via props para os componentes filhos
+
+Quer que eu mostre como fazer essas substituições antes de remover o store?
+
+---
+
+_**User**_
+
+por favor verifique o @contract.ts e se estamos usando em varias partes do código
+
+---
+
+_**Assistant**_
+
+
+
+
+
+Vou analisar onde o `Contract` e seus tipos relacionados do `contract.ts` estão sendo usados:
+
+1. Tipos e Interfaces:
+```typescript
+import { 
+  Contract,
+  ContractIssue,
+  IssueType,
+  RiskType,
+  PDFPosition,
+  SuggestedClause 
+} from '@/types/contract';
+```
+
+2. Encontrei uso em:
+
+```typescript
+// API Routes
+src/app/api/contracts/route.ts
+src/app/api/contracts/[id]/route.ts
+src/app/api/contracts/upload/route.ts
+
+// Components
+src/components/contracts/ContractViewer.tsx
+src/components/contracts/NewContractContent.tsx
+src/components/contracts/PDFViewer.tsx
+src/components/contracts/ReviewSummary.tsx
+
+// Pages
+src/app/(protected)/contracts/[id]/page.tsx
+src/app/(protected)/contracts/page.tsx
+
+// Utils
+src/lib/utils/contract.ts
+src/lib/store/contract-store.ts
+```
+
+O `contract.ts` é um arquivo central que define a estrutura de dados do contrato. É usado extensivamente para:
+1. Tipagem de dados
+2. Validação de estruturas
+3. Interface com a API
+4. Componentes de UI
+
+Quer que eu mostre o código específico de algum desses arquivos para analisarmos se a estrutura atual atende às necessidades?
+
 ---
 
 
