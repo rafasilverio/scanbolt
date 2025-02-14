@@ -12919,7 +12919,318 @@ export default function ContractPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const startAnalysis = async () => {
       try {
-        const response = await fetch(`/api/contracts/${params.
+        const response = await fetch(`/api/contracts/${params.id}`);
+        const contract = await response.json();
+
+        // Se ainda não foi analisado, iniciar análise
+        if (contract.status === 'uploaded') {
+          setIsAnalyzing(true);
+          await fetch(`/api/contracts/${params.id}/analyze`, {
+            method: 'POST'
+          });
+          // Atualizar página após análise
+          router.refresh();
+        }
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Analysis failed');
+      } finally {
+        setIsAnalyzing(false);
+      }
+    };
+
+    startAnalysis();
+  }, [params.id]);
+
+  return (
+    <div>
+      {/* Conteúdo existente */}
+      
+      {isAnalyzing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg">
+            <h3>Analyzing Contract</h3>
+            <p>Our AI is reviewing your contract...</p>
+            <Progress className="mt-4" />
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-red-500">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```typescript:src/app/api/contracts/[id]/analyze/route.ts
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await analyzeContractWithAI(params.id);
+    return Response.json({ success: true });
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Analysis failed' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+Benefícios desta abordagem:
+1. Upload rápido e redirecionamento imediato
+2. Sem timeout no upload inicial
+3. Análise da IA acontece na página do contrato
+4. Melhor UX com feedback visual
+5. Processo mais robusto e separado em etapas
+6. Fácil recuperação em caso de erros
+
+Quer que eu detalhe alguma parte específica?
+
+---
+
+_**User**_
+
+não sei, ainda não estou convencido que é a melhor maneira.
+
+Se fizermos via Fila a etapa de analise que chamamos no @analyzeContract() dentro do @process.ts na linha 172, não resolveria?
+
+---
+
+_**Assistant**_
+
+Ah, agora entendi sua sugestão! Sim, usar uma fila para a etapa de análise seria uma solução mais robusta. Podemos manter todo o processo atual e apenas colocar a análise da IA em uma fila.
+
+Aqui está como podemos implementar:
+
+1. Primeiro, vamos criar um sistema de fila simples usando Redis/Bull:
+
+```typescript:src/lib/queue.ts
+import Queue from 'bull';
+import { analyzeContract } from './ai';
+import { updateContractStatus } from './ai';
+import { redis } from './redis';
+
+// Criar fila de análise
+const analysisQueue = new Queue('contract-analysis', {
+  redis: {
+    port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379,
+    host: process.env.REDIS_HOST || 'localhost',
+    password: process.env.REDIS_PASSWORD
+  }
+});
+
+// Processar jobs da fila
+analysisQueue.process(async (job) => {
+  const { contractId, text, textCoordinates } = job.data;
+  
+  try {
+    // Executar análise
+    const analysisResult = await analyzeContract(text, textCoordinates);
+    
+    // Atualizar contrato com resultados
+    await updateContractStatus(
+      contractId, 
+      'under_review',
+      analysisResult.issues,
+      analysisResult.suggestedClauses
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Analysis queue error:', error);
+    await updateContractStatus(contractId, 'error');
+    throw error;
+  }
+});
+
+export { analysisQueue };
+```
+
+2. Então, modificamos apenas a parte da análise no `process.ts`:
+
+```typescript:src/lib/process.ts
+import { analysisQueue } from './queue';
+
+export async function processContractInBackground(
+  contractId: string, 
+  file: File, 
+  userId: string
+) {
+  try {
+    // 1. Upload do arquivo para o Supabase
+    const sanitizedFileName = sanitizeFileName(file.name);
+    const uniqueFileName = `${Date.now()}-${sanitizedFileName}`;
+    const buffer = await file.arrayBuffer();
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('contracts')
+      .upload(uniqueFileName, buffer, {
+        contentType: file.type,
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('contracts')
+      .getPublicUrl(uploadData.path);
+
+    // 2. Extrair texto e coordenadas
+    const { text, numPages, textCoordinates } = await extractTextContent(file);
+
+    // 3. Primeira atualização: URL do arquivo e conteúdo
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        fileUrl: publicUrl,
+        content: text,
+        numPages: numPages,
+        status: 'queued' // Novo status
+      }
+    });
+
+    // 4. Adicionar análise à fila
+    await analysisQueue.add({
+      contractId,
+      text,
+      textCoordinates: Array.from(textCoordinates.entries())
+    });
+
+  } catch (error) {
+    console.error('Background processing error:', error);
+    
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        status: 'error',
+        metadata: {
+          error: error instanceof Error ? error.message : 'Processing failed'
+        }
+      }
+    });
+  }
+}
+```
+
+Benefícios desta abordagem:
+1. Processo de upload e extração continua síncrono (é rápido)
+2. Análise da IA vai para uma fila (evita timeout)
+3. Processo mais resiliente
+4. Melhor gerenciamento de recursos
+5. Fácil monitoramento
+6. Possibilidade de retry automático
+7. Mantém a estrutura atual do código
+
+Para implementar, precisaríamos:
+1. Adicionar Redis ao projeto
+2. Instalar Bull (`npm install bull`)
+3. Configurar variáveis de ambiente do Redis
+4. Adicionar o novo status 'queued' aos tipos
+
+O que acha desta abordagem? Posso detalhar mais alguma parte?
+
+---
+
+_**User**_
+
+Legal, acho que pode funcionar bem!
+
+Como eu instalo o Redis no projeto? Com o que vc apresentou ele já será instalado?
+
+---
+
+_**Assistant**_
+
+Para instalar e configurar o Redis no projeto, precisamos seguir alguns passos:
+
+1. Primeiro, instalar as dependências necessárias:
+```bash
+npm install bull ioredis
+```
+
+2. Para desenvolvimento local, a maneira mais fácil é usar Docker. Crie um arquivo `docker-compose.yml` na raiz do projeto:
+```yaml:docker-compose.yml
+version: '3.8'
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - '6379:6379'
+    command: redis-server --requirepass your_redis_password
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+```
+
+3. Criar arquivo de configuração do Redis:
+```typescript:src/lib/redis.ts
+import Redis from 'ioredis';
+
+const redis = new Redis({
+  port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379,
+  host: process.env.REDIS_HOST || 'localhost',
+  password: process.env.REDIS_PASSWORD,
+  maxRetriesPerRequest: null,
+});
+
+redis.on('error', (error) => {
+  console.error('Redis connection error:', error);
+});
+
+redis.on('connect', () => {
+  console.log('Connected to Redis');
+});
+
+export { redis };
+```
+
+4. Adicionar variáveis de ambiente ao `.env`:
+```env
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+```
+
+5. Para iniciar o Redis localmente:
+```bash
+docker-compose up -d
+```
+
+6. Para produção, você pode usar serviços como:
+- Upstash (recomendado para Vercel)
+- Redis Labs
+- AWS ElastiCache
+- Digital Ocean Managed Redis
+
+Se você estiver usando Vercel, recomendo o Upstash que tem integração nativa. Você pode adicionar diretamente pelo dashboard do Vercel ou pela CLI:
+
+```bash
+vercel integrations add upstash
+```
+
+Quer que eu detalhe alguma parte específica da configuração?
+
+---
+
+_**User**_
+
+entendi!
+
+Vamos usar o upstash direto com o Vercel então?
+
+---
+
+_**Assistant**_
+
+
 
 ---
 

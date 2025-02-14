@@ -165,13 +165,12 @@ export default function ContractPage() {
         <NewContractContent
           contract={contract}
           isFirstIssue={contract?.status === 'under_review'}
-          onUpgrade={handleGenerateRevision} selectedIssue={null} onIssueClick={function (issue: ContractIssue): void {
-            throw new Error('Function not implemented.');
-          } } onNext={function (): void {
-            throw new Error('Function not implemented.');
-          } } onClose={function (): void {
-            throw new Error('Function not implemented.');
-          } }        />
+          onUpgrade={handleGenerateRevision}
+          selectedIssue={null}
+          onIssueClick={() => {}}
+          onNext={() => {}}
+          onClose={() => {}}
+        />
       </div>
     </div>
   );
