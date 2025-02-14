@@ -1,11 +1,11 @@
-import OpenAI from 'openai';
 import crypto from 'crypto';
 import { ContractIssue, SuggestedClause } from '@/types/contract';
 import prisma from '@/lib/prisma';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openRouter = {
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+};
 
 export async function analyzeContract(text: string, textCoordinates: Map<string, any>): Promise<{ 
   issues: ContractIssue[], 
@@ -18,15 +18,21 @@ export async function analyzeContract(text: string, textCoordinates: Map<string,
       coordinates: coords
     }));
 
-    const analysisResponse = await openai.chat.completions.create({
-      max_tokens: 4000,
-      temperature: 0.2,
-      model: "gpt-4o",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert legal document analyzer specialized in contracts. Your task is to:
+    const response = await fetch(`${openRouter.baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openRouter.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-r1:free",
+        max_tokens: 5000,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert legal document analyzer specialized in contracts. Your task is to:
 
 1. Analyze the provided contract text for issues and improvements.
 2. Identify missing essential clauses and generate a 3 missing clauses minimum.
@@ -35,6 +41,7 @@ export async function analyzeContract(text: string, textCoordinates: Map<string,
    - Warning: Compliance concerns or potential risks - Generate a 1 warning issue minimum
    - Improvement: Suggestions for better clarity or protection - Generate a 1 improvement issue minimum
 
+Dont respond with anything else than the JSON.
 Return a JSON with the following structure:
 {
   "issues": [
@@ -74,15 +81,17 @@ Return a JSON with the following structure:
     }
   ]
 }`
-        },
-        {
-          role: "user",
-          content: `Analyze this contract text and use the provided text segments with coordinates:
+          },
+          {
+            role: "user",
+            content: `Analyze this contract text and use the provided text segments with coordinates:
 ${JSON.stringify(textLines, null, 2)}`
-        }
-      ]
+          }
+        ]
+      })
     });
 
+    const analysisResponse = await response.json();
     const analysis = JSON.parse(analysisResponse.choices[0]?.message?.content || '{"issues":[],"suggestedClauses":[]}');
 
     // Processar issues mantendo as coordenadas originais

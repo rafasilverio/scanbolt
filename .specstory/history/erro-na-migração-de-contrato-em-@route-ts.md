@@ -12162,6 +12162,767 @@ Me avise se ainda estiver lento!
 
 ---
 
+_**User**_
+
+resolvido a do upload, mas o timeout no @route.ts  ainda ocorre. O que podemos fazer para resolver sem quebrar outras partes do código?
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+
+
+Vamos otimizar o `migrate/route.ts` para evitar timeout mantendo a funcionalidade:
+
+```typescript:src/app/api/preview/migrate/route.ts
+export async function POST(request: Request) {
+  try {
+    // Verificar autenticação
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Obter tempId do corpo da requisição
+    const { tempId } = await request.json();
+    if (!tempId) {
+      return NextResponse.json({ error: 'Missing tempId' }, { status: 400 });
+    }
+
+    // Buscar dados do preview
+    const { data: previewCache, error: previewError } = await supabaseAdmin
+      .from('preview_cache')
+      .select('*')
+      .eq('id', tempId)
+      .single();
+
+    if (previewError || !previewCache) {
+      console.error('Preview cache error:', previewError);
+      return NextResponse.json(
+        { error: 'Preview not found' },
+        { status: 404 }
+      );
+    }
+
+    // Criar contrato imediatamente com dados mínimos
+    const contract = await prisma.contract.create({
+      data: {
+        userId: session.user.id,
+        fileUrl: '', 
+        fileName: previewCache.data.fileName,
+        title: previewCache.data.fileName,
+        fileType: previewCache.data.fileType || 'application/pdf',
+        content: '',  // será atualizado durante o processamento
+        issues: [],
+        suggestedClauses: [],
+        status: 'analyzing',
+        metadata: {
+          pageCount: previewCache.data.metadata?.pageCount || 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          originalFileName: previewCache.data.fileName,
+          fileSize: previewCache.data.metadata?.fileSize || 0,
+        }
+      }
+    });
+
+    // Iniciar processamento em background sem esperar
+    Promise.resolve().then(async () => {
+      try {
+        if (previewCache.data.content) {
+          const fileBuffer = Buffer.from(previewCache.data.content, 'base64');
+          const file = new File([fileBuffer], previewCache.data.fileName, {
+            type: previewCache.data.fileType || 'application/pdf'
+          });
+          
+          await processContractInBackground(contract.id, file, session.user.id);
+          
+          // Limpar cache após processamento
+          await supabaseAdmin
+            .from('preview_cache')
+            .delete()
+            .eq('id', tempId);
+        }
+      } catch (error) {
+        console.error('Background processing error:', error);
+        // Atualizar status do contrato em caso de erro
+        await prisma.contract.update({
+          where: { id: contract.id },
+          data: { 
+            status: 'error',
+            metadata: {
+              ...contract.metadata,
+              error: error instanceof Error ? error.message : 'Processing failed'
+            }
+          }
+        });
+      }
+    });
+
+    // Retornar resposta imediatamente
+    return NextResponse.json({
+      success: true,
+      contractId: contract.id,
+      status: 'analyzing'
+    });
+
+  } catch (error) {
+    console.error('Migration error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to migrate contract' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+```
+
+
+
+
+Principais mudanças:
+1. Criação do contrato com dados mínimos primeiro
+2. Processamento totalmente assíncrono usando `Promise.resolve().then()`
+3. Limpeza do cache movida para depois do processamento
+4. Resposta imediata após criar o contrato
+5. Melhor tratamento de erros no background
+
+Isso deve:
+1. Evitar timeout na rota
+2. Manter todas as funcionalidades
+3. Permitir processamento completo em background
+4. Dar feedback mais rápido ao usuário
+
+Me avise se ainda houver problemas!
+
+---
+
+_**User**_
+
+Vamos atualizar o modelo de AI que vamos utilizar no arquivo @ai.ts . Estamos trocando da OpenAI para a OpenRouter (aqui está a documentação @OpenRouter API ) onde vamos usar o modelo "deepseek/deepseek-r1:free" - @https://openrouter.ai/deepseek/deepseek-r1:free 
+
+Por favor não mude o prompt da OpenAi no momento, atualize para o modelo e OpenRouter mas sem mexar na lógica do prompt que esta funcionando normalmente.
+
+Segue a chave da API:
+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
+
+E um código de exemplo:
+fetch("https://openrouter.ai/api/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer <OPENROUTER_API_KEY>",
+    "HTTP-Referer": "<YOUR_SITE_URL>", // Optional. Site URL for rankings on openrouter.ai.
+    "X-Title": "<YOUR_SITE_NAME>", // Optional. Site title for rankings on openrouter.ai.
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    "model": "deepseek/deepseek-r1:free",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the meaning of life?"
+      }
+    ]
+  })
+});
+
+---
+
+_**Assistant**_
+
+Vou ajudar a atualizar o arquivo `ai.ts` para usar o OpenRouter mantendo a mesma lógica do prompt. Aqui está a implementação:
+
+```typescript:src/lib/ai.ts
+// ... existing code ...
+
+// Substituir a inicialização do OpenAI
+const openRouter = {
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+};
+
+export async function analyzeContract(text: string, textCoordinates: Map<string, any>): Promise<{ 
+  issues: ContractIssue[], 
+  suggestedClauses: SuggestedClause[] 
+}> {
+  try {
+    // Converter o Map de coordenadas para um objeto para incluir no prompt
+    const textLines = Array.from(textCoordinates.entries()).map(([text, coords]) => ({
+      text,
+      coordinates: coords
+    }));
+
+    const response = await fetch(`${openRouter.baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openRouter.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        'X-Title': 'Contract Analyzer'
+      },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-r1:free",
+        max_tokens: 4000,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert legal document analyzer specialized in contracts. Your task is to:
+
+1. Analyze the provided contract text for issues and improvements.
+2. Identify missing essential clauses and generate a 3 missing clauses minimum.
+3. Provide comprehensive feedback in the following categories:
+   - Critical: Legal risks or serious issues - Generate a 3 critical issues minimum
+   - Warning: Compliance concerns or potential risks - Generate a 1 warning issue minimum
+   - Improvement: Suggestions for better clarity or protection - Generate a 1 improvement issue minimum
+
+Return a JSON with the following structure:
+{
+  "issues": [
+    {
+      "id": "uuid-string",
+      "type": "critical" | "warning" | "improvement",
+      "originalText": "EXACT text from the provided segments",
+      "newText": "Suggested replacement text",
+      "explanation": "Clear explanation of the issue",
+      "riskType": "legal" | "financial" | "compliance" | "operational",
+      "status": "pending",
+      "position": {
+        "startIndex": number,
+        "endIndex": number,
+        "pageNumber": number,
+        "x1": number,
+        "y1": number,
+        "x2": number,
+        "y2": number,
+        "width": number,
+        "height": number
+      }
+    }
+  ],
+  "suggestedClauses": [
+    {
+      "id": "uuid-string",
+      "title": "Clause title",
+      "explanation": "Why this clause is needed",
+      "suggestedText": "Complete text of suggested clause",
+      "riskType": "legal" | "financial" | "compliance" | "operational",
+      "status": "pending",
+      "suggestedPosition": {
+        "afterClause": "Text of clause to insert after",
+        "pageNumber": number
+      }
+    }
+  ]
+}`
+          },
+          {
+            role: "user",
+            content: `Analyze this contract text and use the provided text segments with coordinates:
+${JSON.stringify(textLines, null, 2)}`
+          }
+        ]
+      })
+    });
+
+    const analysisResponse = await response.json();
+    const analysis = JSON.parse(analysisResponse.choices[0]?.message?.content || '{"issues":[],"suggestedClauses":[]}');
+
+    // Processar issues mantendo as coordenadas originais
+    const processedIssues = analysis.issues.map((issue: ContractIssue) => {
+      const coordinates = textCoordinates.get(issue.originalText.trim());
+      return {
+        ...issue,
+        id: issue.id || crypto.randomUUID(),
+        status: 'pending' as const,
+        position: {
+          ...issue.position,
+          ...(coordinates || {})
+        }
+      };
+    });
+
+    return {
+      issues: processedIssues,
+      suggestedClauses: analysis.suggestedClauses
+    };
+  } catch (error) {
+    console.error('Analysis error:', error);
+    return { issues: [], suggestedClauses: [] };
+  }
+}
+
+// ... rest of the existing code ...
+```
+
+Principais mudanças:
+1. Substituição do cliente OpenAI pelo OpenRouter
+2. Adição dos headers específicos do OpenRouter
+3. Atualização do modelo para "deepseek/deepseek-r1:free"
+4. Mantida toda a lógica do prompt e processamento
+
+Você precisará atualizar a variável de ambiente:
+```env
+OPENROUTER_API_KEY=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
+```
+
+O restante do código permanece igual, mantendo a mesma funcionalidade mas usando o novo provedor de AI([1](https://openrouter.ai/docs/api-reference/overview)).
+
+Me avise se precisar de ajustes!
+
+---
+
+_**User**_
+
+Hey chat, vamos entender como implementar um processo onde ao subir o PDF do contrato em @ContractUploader.tsx ou @PreviewUploader.tsx nós conseguimos trabalhar de forma que não gere timeout.
+
+O que ocorre hoje é que ao fazer o upload a função @processContractInBackground() é chamada e dentro dela temos a @ai.ts . Acontece que ao entrar na AI pode levar um tempo maior para o processo finalizar e retornar o resultado final com as issues do contrato, principalmente agora que colocamos a OpenRoute.
+
+Qual seria a melhor forma de implementarmos algo para que a IA continue analisando de fundo e o Contrato seja gerado e redirecionado normalmente para o /[id]/page sem o timeout?
+
+Vamos encontrar algumas soluções para este caso antes de codar.
+
+---
+
+_**Assistant**_
+
+Analisando o fluxo atual e o problema do timeout, vejo algumas possíveis soluções:
+
+1. **Solução com Status Intermediários**:
+```typescript
+// Status do contrato:
+'uploading' -> 'extracting' -> 'analyzing' -> 'under_review'
+```
+- Upload inicial rápido
+- Extração de texto em background
+- Análise AI em background
+- Cliente monitora progresso
+
+2. **Solução com Fila de Processamento**:
+```typescript
+// Fluxo:
+Upload -> Criar Contrato -> Adicionar à Fila -> Processar em Background
+```
+- Sistema de fila (Redis/Bull)
+- Processamento assíncrono
+- Webhook para notificações
+- Atualizações em tempo real
+
+3. **Solução com Processamento em Etapas**:
+```typescript
+// Etapas:
+1. Upload + Criação (imediato)
+2. Extração de Texto (background)
+3. Análise AI (background)
+4. Atualização Final (background)
+```
+- Cada etapa independente
+- Status detalhado
+- Progresso granular
+
+4. **Solução com WebSocket**:
+```typescript
+// Fluxo em tempo real:
+Cliente <-> WebSocket <-> Servidor
+```
+- Atualizações em tempo real
+- Progresso detalhado
+- Melhor UX
+
+Recomendação:
+Sugiro implementar a **Solução com Status Intermediários** primeiro, pois:
+1. Mais simples de implementar
+2. Não requer infraestrutura adicional
+3. Mantém a arquitetura atual
+4. Resolve o problema do timeout
+5. Melhor feedback ao usuário
+
+Quer que eu detalhe como implementar alguma dessas soluções?
+
+---
+
+_**User**_
+
+Certo, nós já temos alguns status implementados e precisamos destes outros que você sugeriu.
+
+Por favor detalhe como seria essa implementação. Atente-se para não quebrar nada em nosso código.
+
+---
+
+_**Assistant**_
+
+
+
+Vou detalhar a implementação da solução com status intermediários, mantendo a estrutura atual e apenas adicionando os novos status:
+
+1. Primeiro, vamos atualizar os tipos para incluir os novos status:
+
+```typescript:src/types/contract.ts
+export type ContractStatus = 
+  | 'uploading'    // Upload inicial
+  | 'extracting'   // Extraindo texto
+  | 'analyzing'    // IA analisando
+  | 'under_review' // Análise completa
+  | 'error'        // Erro em qualquer etapa
+```
+
+2. Atualizar o processamento em background:
+
+```typescript:src/lib/process.ts
+export async function processContractInBackground(
+  contractId: string, 
+  file: File, 
+  userId: string
+) {
+  try {
+    // 1. Upload do arquivo para o Supabase
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: { status: 'uploading' }
+    });
+
+    const sanitizedFileName = sanitizeFileName(file.name);
+    const uniqueFileName = `${Date.now()}-${sanitizedFileName}`;
+    const buffer = await file.arrayBuffer();
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('contracts')
+      .upload(uniqueFileName, buffer, {
+        contentType: file.type,
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('contracts')
+      .getPublicUrl(uploadData.path);
+
+    // 2. Extrair texto e coordenadas
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: { 
+        status: 'extracting',
+        fileUrl: publicUrl 
+      }
+    });
+
+    const { text, numPages, textCoordinates } = await extractTextContent(file);
+
+    // 3. Atualizar com texto extraído e iniciar análise
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        status: 'analyzing',
+        content: text,
+        numPages: numPages
+      }
+    });
+
+    // 4. Análise do contrato
+    const analysisResult = await analyzeContract(text, textCoordinates);
+
+    // 5. Atualização final com resultados
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        issues: JSON.parse(JSON.stringify(analysisResult.issues)),
+        suggestedClauses: JSON.parse(JSON.stringify(analysisResult.suggestedClauses)),
+        status: "under_review",
+        metadata: {
+          pageCount: numPages,
+          updatedAt: new Date()
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Background processing error:', error);
+    
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        status: 'error',
+        metadata: {
+          error: error instanceof Error ? error.message : 'Processing failed',
+          lastStatus: await getLastStatus(contractId)
+        }
+      }
+    });
+  }
+}
+
+// Função auxiliar para obter último status
+async function getLastStatus(contractId: string) {
+  const contract = await prisma.contract.findUnique({
+    where: { id: contractId },
+    select: { status: true }
+  });
+  return contract?.status;
+}
+```
+
+3. Atualizar o componente de upload para mostrar status detalhado:
+
+```typescript:src/components/contracts/upload/ContractUploader.tsx
+const statusMessages = {
+  uploading: 'Uploading your contract...',
+  extracting: 'Extracting contract text...',
+  analyzing: 'AI analyzing your contract...',
+  under_review: 'Analysis complete!',
+  error: 'An error occurred'
+};
+
+const getProgressPercentage = (status: string) => {
+  switch (status) {
+    case 'uploading': return 25;
+    case 'extracting': return 50;
+    case 'analyzing': return 75;
+    case 'under_review': return 100;
+    default: return 0;
+  }
+};
+
+export function ContractUploader() {
+  // ... existing code ...
+
+  const checkStatus = async (contractId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/status`);
+      const data = await response.json();
+      
+      const message = statusMessages[data.status] || 'Processing...';
+      const progress = getProgressPercentage(data.status);
+      
+      setProgress(message);
+      
+      switch (data.status) {
+        case 'under_review':
+          router.push(`/contracts/${contractId}`);
+          return true;
+        case 'error':
+          throw new Error(data.error || 'Contract analysis failed');
+        case 'uploading':
+        case 'extracting':
+        case 'analyzing':
+          return false;
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error('Status check error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to process contract');
+      setUploading(false);
+      return true;
+    }
+  };
+
+  // ... rest of the code ...
+}
+```
+
+4. Atualizar o componente de progresso:
+
+```typescript:src/components/contracts/upload/ProcessingModal.tsx
+export function ProcessingModal({ 
+  isOpen, 
+  onCancel, 
+  status, 
+  progress 
+}: ProcessingModalProps) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onCancel}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Processing Contract</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-sm">
+            <span>{statusMessages[status] || 'Processing...'}</span>
+          </div>
+          <Progress 
+            value={getProgressPercentage(status)} 
+            className="h-2"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+Esta implementação:
+1. Mantém a estrutura existente
+2. Adiciona status mais granulares
+3. Melhora o feedback ao usuário
+4. Permite processamento em background
+5. Evita timeouts
+6. Mantém rastreabilidade em caso de erros
+
+Quer que eu detalhe alguma parte específica ou faça ajustes?
+
+---
+
+_**User**_
+
+Eu entendi a solução, mas acredito que ainda ocorrera timeout na etapa da IA, porque vamos chamar uma API externa e ficar nela por um tempo e também "travado" no Processing Modal.
+
+O que acha de deixarmos a parte da Analise de IA de fundo já dentro da página do contrato? Com um loading até finalizar.
+
+O que teriamos que alterar?
+
+---
+
+_**Assistant**_
+
+Excelente sugestão! Vamos separar o processo em duas partes:
+
+1. Upload rápido + criação do contrato (redirecionamento imediato)
+2. Análise da IA na página do contrato
+
+Aqui estão as alterações necessárias:
+
+```typescript:src/lib/process.ts
+// 1. Separar o processamento em duas funções
+export async function processInitialUpload(
+  contractId: string, 
+  file: File, 
+  userId: string
+) {
+  try {
+    // 1. Upload do arquivo para o Supabase
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: { status: 'uploading' }
+    });
+
+    const sanitizedFileName = sanitizeFileName(file.name);
+    const uniqueFileName = `${Date.now()}-${sanitizedFileName}`;
+    const buffer = await file.arrayBuffer();
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('contracts')
+      .upload(uniqueFileName, buffer, {
+        contentType: file.type,
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('contracts')
+      .getPublicUrl(uploadData.path);
+
+    // 2. Extrair texto e coordenadas
+    const { text, numPages, textCoordinates } = await extractTextContent(file);
+
+    // 3. Atualizar com dados iniciais
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        fileUrl: publicUrl,
+        content: text,
+        numPages: numPages,
+        status: 'uploaded', // Novo status
+        metadata: {
+          pageCount: numPages,
+          textCoordinates: JSON.stringify(textCoordinates),
+          updatedAt: new Date()
+        }
+      }
+    });
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        status: 'error',
+        metadata: {
+          error: error instanceof Error ? error.message : 'Upload failed'
+        }
+      }
+    });
+    throw error;
+  }
+}
+
+// 2. Função separada para análise da IA
+export async function analyzeContractWithAI(contractId: string) {
+  try {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId }
+    });
+
+    if (!contract) throw new Error('Contract not found');
+
+    // Atualizar status para analyzing
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: { status: 'analyzing' }
+    });
+
+    // Recuperar coordenadas do metadata
+    const textCoordinates = new Map(JSON.parse(contract.metadata?.textCoordinates || '[]'));
+
+    // Análise da IA
+    const analysisResult = await analyzeContract(contract.content, textCoordinates);
+
+    // Atualizar com resultados
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        issues: analysisResult.issues,
+        suggestedClauses: analysisResult.suggestedClauses,
+        status: 'under_review'
+      }
+    });
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('Analysis error:', error);
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        status: 'error',
+        metadata: {
+          ...contract?.metadata,
+          error: error instanceof Error ? error.message : 'Analysis failed'
+        }
+      }
+    });
+    throw error;
+  }
+}
+```
+
+```typescript:src/app/contracts/[id]/page.tsx
+export default function ContractPage({ params }: { params: { id: string } }) {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const startAnalysis = async () => {
+      try {
+        const response = await fetch(`/api/contracts/${params.
+
+---
+
 
 
 ---

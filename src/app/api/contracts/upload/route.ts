@@ -15,7 +15,7 @@ import PDFParser from 'pdf2json';
 import { analyzeContract } from '@/lib/ai';
 import { processContractInBackground } from '@/lib/process';
 
-export const maxDuration = 300; // Aumentado para 5 minutos
+export const maxDuration = 60; // Aumentado para 5 minutos
 export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({
