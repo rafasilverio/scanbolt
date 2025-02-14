@@ -93,17 +93,12 @@ export default function PreviewPage({ params }: { params: { tempId: string } }) 
             <NewContractContent
               contract={previewData ?? undefined}
               isFirstIssue={false}
-              onUpgrade={() => {
-                throw new Error('Function not implemented.');
-              } }
-              onNext={() => {
-                throw new Error('Function not implemented.');
-              } }
-              onClose={() => {
-                throw new Error('Function not implemented.');
-              } } selectedIssue={null} onIssueClick={function (issue: ContractIssue): void {
-                throw new Error('Function not implemented.');
-              } }            />
+              onUpgrade={() => {}}
+              onNext={() => {}}
+              onClose={() => {}}
+              selectedIssue={null}
+              onIssueClick={() => {}}
+            />
             <BlurredPreview 
               tempId={params.tempId}
               onViewFullAnalysis={handleViewFullAnalysis}

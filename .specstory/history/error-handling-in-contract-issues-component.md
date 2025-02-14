@@ -110,6 +110,93 @@ De nada! Fico feliz em ajudar. A solução com funções vazias (no-op) é uma p
 
 ---
 
+_**User**_
+
+eu estou com esse erro no @page.tsx podemos contornar ele ou omitir ele?
+
+---
+
+_**Assistant**_
+
+Sim, podemos corrigir da mesma forma que fizemos anteriormente, substituindo as funções que lançam erro por funções vazias:
+
+```typescript:src/app/preview/[tempId]/page.tsx
+// ... existing code ...
+            <NewContractContent
+              contract={previewData ?? undefined}
+              isFirstIssue={false}
+              onUpgrade={() => {}}    // função vazia
+              onNext={() => {}}       // função vazia
+              onClose={() => {}}      // função vazia
+              selectedIssue={null}
+              onIssueClick={() => {}} // função vazia
+            />
+// ... existing code ...
+```
+
+Essa alteração vai remover os erros e manter o componente funcionando, mesmo que sem as implementações específicas dessas funções. Como é uma página de preview, provavelmente você não precisa implementar essas ações de qualquer forma.
+
+---
+
+_**User**_
+
+o que pode ser este erro? A tela abre normal mas aparece esse erro no console e o navegador travou
+
+---
+
+_**Assistant**_
+
+Esse erro está ocorrendo porque o componente PDF está tentando acessar objetos do navegador (`window` e `document`) durante o Server-Side Rendering (SSR) do Next.js, onde esses objetos não existem.
+
+Para resolver isso, você precisa fazer o componente que usa o PDF viewer ser carregado apenas no lado do cliente. Você pode fazer isso usando dynamic imports com a opção `ssr: false`.
+
+Aqui está como você pode modificar o componente:
+
+```typescript:src/components/contracts/PDFViewer.tsx
+import dynamic from 'next/dynamic';
+
+// Importe o componente PDF de forma dinâmica, desabilitando SSR
+const PDFViewer = dynamic(
+  () => import('./PDFViewerComponent'), // crie um novo arquivo com o componente original
+  { 
+    ssr: false,
+    loading: () => <div>Loading PDF viewer...</div>
+  }
+);
+
+export default PDFViewer;
+```
+
+E crie um novo arquivo para o componente original:
+
+```typescript:src/components/contracts/PDFViewerComponent.tsx
+'use client';
+
+// Mova o código original do PDFViewer para cá
+// ... seu código do PDFViewer aqui ...
+```
+
+Isso vai fazer com que:
+1. O componente PDF só seja carregado no lado do cliente
+2. Evite os erros de `window is not defined` e `document is not defined`
+3. Mostre um componente de loading enquanto o viewer está carregando
+
+O erro `Promise.withResolvers is not a function` também será resolvido, pois está relacionado ao mesmo problema de SSR.
+
+---
+
+_**User**_
+
+obrigado!
+
+---
+
+_**Assistant**_
+
+
+
+---
+
 
 
 ---
