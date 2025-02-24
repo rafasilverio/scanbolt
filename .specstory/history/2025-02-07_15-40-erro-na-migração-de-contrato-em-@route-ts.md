@@ -13232,6 +13232,157 @@ _**Assistant**_
 
 
 
+Sim, ótima escolha! Vamos configurar o Upstash com Vercel. É mais simples e já otimizado para Edge Functions.
+
+1. Primeiro, instale as dependências:
+```bash
+npm install @upstash/redis @upstash/queue
+```
+
+2. Crie o arquivo de configuração do Upstash:
+```typescript:src/lib/upstash.ts
+import { Redis } from '@upstash/redis';
+import { Queue } from '@upstash/queue';
+
+// Configurar Redis
+export const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+// Configurar Queue
+export const analysisQueue = new Queue({
+  redis: redis,
+  queueName: 'contract-analysis'
+});
+```
+
+3. Atualizar o processamento para usar Upstash Queue:
+```typescript:src/lib/process.ts
+import { analysisQueue } from './upstash';
+
+export async function processContractInBackground(
+  contractId: string, 
+  file: File, 
+  userId: string
+) {
+  try {
+    // ... código existente de upload e extração ...
+
+    // Adicionar à fila do Upstash
+    await analysisQueue.enqueue({
+      contractId,
+      text,
+      textCoordinates: Array.from(textCoordinates.entries())
+    });
+
+    // Atualizar status
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: {
+        status: 'queued',
+        metadata: {
+          queuedAt: new Date()
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Processing error:', error);
+    // ... código existente de tratamento de erro ...
+  }
+}
+```
+
+4. Criar um worker para processar a fila:
+```typescript:src/app/api/queue/worker/route.ts
+import { analysisQueue } from '@/lib/upstash';
+import { analyzeContract } from '@/lib/ai';
+import { updateContractStatus } from '@/lib/ai';
+import { NextResponse } from 'next/server';
+
+export const runtime = 'edge';
+export const preferredRegion = 'auto';
+
+export async function POST(request: Request) {
+  try {
+    // Processar próximo item da fila
+    const job = await analysisQueue.dequeue();
+    
+    if (!job) {
+      return NextResponse.json({ status: 'no jobs' });
+    }
+
+    const { contractId, text, textCoordinates } = job;
+
+    // Executar análise
+    const analysisResult = await analyzeContract(
+      text, 
+      new Map(textCoordinates)
+    );
+
+    // Atualizar contrato
+    await updateContractStatus(
+      contractId,
+      'under_review',
+      analysisResult.issues,
+      analysisResult.suggestedClauses
+    );
+
+    return NextResponse.json({ status: 'success' });
+
+  } catch (error) {
+    console.error('Worker error:', error);
+    return NextResponse.json(
+      { error: 'Worker failed' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+5. Adicionar as variáveis de ambiente no Vercel:
+```env
+UPSTASH_REDIS_REST_URL=your_url
+UPSTASH_REDIS_REST_TOKEN=your_token
+```
+
+Para configurar no Vercel:
+1. Vá para o dashboard do projeto
+2. Clique em "Storage"
+3. Escolha "Connect Store"
+4. Selecione Upstash
+5. Siga o processo de configuração
+
+O Vercel irá automaticamente:
+- Criar um banco Redis
+- Configurar as variáveis de ambiente
+- Estabelecer a conexão
+
+Para testar localmente, você pode copiar as variáveis do dashboard do Vercel para seu `.env.local`.
+
+Quer que eu detalhe alguma parte específica ou explique melhor o funcionamento do worker?
+
+---
+
+_**User**_
+
+Hey chat, eu estou enfrentando timeout ao analisar um contrato com IA ao subir para produção.
+
+O que acha de deixarmos a parte da Analise de IA de fundo (via fila) já dentro da página do contrato? Com um loading até finalizar.
+
+Se fizermos via Fila a etapa de analise que chamamos no @analyzeContract() dentro do @process.ts na linha 172, não resolveria?
+
+Pensei em usar o upstash direto com o Vercel.
+
+O que você acha desta solução para evitar os problemas de timeout? Por favor analise com cuidado e me traga a melhor solução e forma de implementar sem quebrar o sistema atual.
+
+---
+
+_**Assistant**_
+
+
+
 ---
 
 

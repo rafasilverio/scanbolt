@@ -8,6 +8,7 @@ import { Contract, ContractIssue } from '@/types/contract';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReviewSummary } from '@/components/contracts/ReviewSummary';
 import { NewContractContent } from '@/components/contracts/NewContractContent';
+import { CheckCircle } from 'lucide-react';
 
 export default function ContractPage() {
   const params = useParams();
@@ -138,27 +139,53 @@ export default function ContractPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex-none w-full bg-gradient-to-b from-[#5000f7] to-[#2563EB] px-6 py-12 relative rounded-t-3xl">
+      <div className="flex-none w-full px-4 py-4 relative">
         <div className="max-w-7xl mx-auto space-y-6 relative z-10">
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-xl">
-            <h1 className="text-white text-3xl font-bold tracking-tight mb-4">
-              AI Contract Analysis Report
-            </h1>
-            <p className="text-blue-100 text-lg leading-relaxed">
-              Our AI has analyzed your contract and identified potential risks and opportunities for improvement
-            </p>
+          <div className="rounded-3xl p-8 sm:p-10 border border-white/10 shadow-xl bg-gradient-to-b from-indigo-950/80 to-gray-900/90">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-12 w-12 rounded-full bg-green-400/20 flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-400" />
+              </div>
+              <div>
+                <h2 className="text-green-400 text-sm font-medium">Contract Secured</h2>
+                <h1 className="text-white text-2xl sm:text-3xl font-bold">
+                  Welcome to Peace of Mind
+                </h1>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <p className="text-blue-50 text-lg leading-relaxed">
+                Your contract has been thoroughly analyzed by our advanced AI. We've taken care of identifying and addressing all potential concerns, so you can move forward with confidence.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                <div className="bg-gray-900/50 rounded-2xl p-4 border border-white/10">
+                  <div className="text-blue-200 mb-2">Comprehensive Analysis</div>
+                  <div className="text-white/90 text-sm">Every detail reviewed with precision</div>
+                </div>
+                <div className="bg-gray-900/50 rounded-2xl p-4 border border-white/10">
+                  <div className="text-blue-200 mb-2">Risk Assessment</div>
+                  <div className="text-white/90 text-sm">Potential issues identified & resolved</div>
+                </div>
+                <div className="bg-gray-900/50 rounded-2xl p-4 border border-white/10">
+                  <div className="text-blue-200 mb-2">Smart Suggestions</div>
+                  <div className="text-white/90 text-sm">AI-powered improvements ready</div>
+                </div>
+              </div>
+            </div>
           </div>
           
-          <ReviewSummary 
+          {/* <ReviewSummary 
             contract={contract}
             onStartReview={handleStartReview}
             showReview={showReview}
-          />
+          />  */}
         </div>
         
         {/* Decorative elements */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)] pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#2563EB]/50 to-transparent pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-16 sm:h-24 bg-gradient-to-t to-transparent pointer-events-none"></div>
       </div>
       
       <div className="flex-1 overflow-hidden">
