@@ -71,10 +71,10 @@ export function PreviewUploader() {
     setError(null);
 
     try {
-      // Progresso inicial mais suave
-      for (const step of [5, 10, 15]) {
+      // Smoother initial progress steps
+      for (let step = 1; step <= 15; step += 2) {
         setProgress(step);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       const formData = new FormData();
@@ -83,8 +83,11 @@ export function PreviewUploader() {
       const tempId = crypto.randomUUID();
       setTempId(tempId);
       
-      // Progresso durante o upload
-      setProgress(20);
+      // Upload progress
+      for (let step = 16; step <= 25; step += 1) {
+        setProgress(step);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
       
       const response = await fetch(`/api/preview/${tempId}`, {
         method: "POST",
@@ -97,8 +100,11 @@ export function PreviewUploader() {
         throw new Error(errorText || 'Upload failed');
       }
 
-      // Progresso após upload bem sucedido
-      setProgress(40);
+      // Post-upload progress
+      for (let step = 26; step <= 40; step += 1) {
+        setProgress(step);
+        await new Promise(resolve => setTimeout(resolve, 80));
+      }
       
       const data = await response.json();
 
@@ -106,19 +112,22 @@ export function PreviewUploader() {
         throw new Error(data.error || 'Upload failed');
       }
 
-      // Simulação de análise com progresso mais suave
-      const analysisSteps = [45, 50, 60, 70, 80, 90, 95, 100];
-      for (const step of analysisSteps) {
+      // Analysis simulation with smoother progression
+      for (let step = 41; step <= 99; step += 1) {
         setProgress(step);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Gradually slow down the increment to simulate intensive processing
+        const delay = 50 + Math.floor((step - 40) / 10) * 20;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-
-      // Manter o modal por um momento após 100%
+      
+      // Complete
+      setProgress(100);
+      // Pause briefly at 100%
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Redirecionar mantendo o modal aberto
+      // Redirect while keeping modal open
       await router.push(`/preview/${tempId}`);
-      // Fechar o modal apenas após a navegação estar completa
+      // Close modal only after navigation is complete
       setIsUploading(false);
       setFile(null);
 
@@ -136,80 +145,92 @@ export function PreviewUploader() {
 
   return (
     <>
-      <div className="w-full">
-        <div 
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-12 text-center ${
-            isDragging ? 'border-[#2563EB] bg-blue-50/10' :
-            error ? 'border-red-500 bg-red-50/10' : 
-            file ? 'border-green-500 bg-green-50/10' : 
-            'border-[#BFDBFE]/30 hover:border-[#2563EB] hover:bg-[#2563EB]/20'
-          } transition-colors`}
-        >
-          {!file ? (
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                <Upload className="h-12 w-12 text-[#BFDBFE]" />
-              </div>
-              <div>
-                <p className="text-lg font-medium text-white">Start Your Contract Analysis</p>
-                <p className="text-sm text-[#BFDBFE]">Drag and drop your contract here or</p>
-                <Button
-                  variant="ghost"
-                  onClick={() => document.getElementById('preview-upload')?.click()}
-                  className="bg-sky-600 hover:bg-sky-400"
-                >
-                  Browse files
-                </Button>
-                <input
-                  id="preview-upload"
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx,.txt"
-                  onChange={handleFileInput}
-                  disabled={isUploading}
-                />
-              </div>
-              <p className="text-sm text-[#BFDBFE]">
-                Supported formats: PDF, DOC, DOCX, TXT (max 10MB)
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-center space-x-4">
-                <FileIcon className="h-8 w-8 text-green-500" />
-                <span className="font-medium text-white">{file.name}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFile(null)}
-                  className="text-[#BFDBFE] hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {error && (
-          <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
-            <AlertCircle className="w-4 h-4" />
-            {error}
-          </p>
-        )}
-
-        {file && !error && (
-          <Button
-            className="w-full bg-[#179401] hover:bg-[#07b81c] my-2 rounded-lg"
-            onClick={() => handleUpload(file)}
-            disabled={isUploading}
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+          <div 
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-xl p-10 text-center ${
+              isDragging ? 'border-yellow-400 bg-yellow-50/50' :
+              error ? 'border-red-400 bg-red-50/50' : 
+              file ? 'border-green-400 bg-green-50/50' : 
+              'border-slate-200 hover:border-yellow-400 hover:bg-yellow-50/20'
+            } transition-colors`}
           >
-            {isUploading ? 'Processing...' : 'Analyze Contract Now'}
-          </Button>
-        )}
+            {!file ? (
+              <div className="space-y-4">
+                <div className="flex justify-center">
+                  <div className="bg-yellow-50 p-5 rounded-full border border-yellow-100">
+                    <Upload className="h-10 w-10 text-yellow-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-slate-800 mb-3">Start Your Contract Analysis</p>
+                  <p className="text-slate-600 mb-4">Drag and drop your contract here or click to browse files</p>
+                  <Button
+                    variant="default"
+                    onClick={() => document.getElementById('preview-upload')?.click()}
+                    className="bg-primary hover:bg-primary/90 px-6 py-5 text-base"
+                  >
+                    Browse files
+                  </Button>
+                  <input
+                    id="preview-upload"
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={handleFileInput}
+                    disabled={isUploading}
+                  />
+                </div>
+                <p className="text-sm text-slate-500 mt-4">
+                  Supported formats: PDF, DOC, DOCX, TXT (max 10MB)
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4 py-4">
+                <div className="flex items-center justify-center space-x-4">
+                  <div className="bg-green-100 p-2 rounded-full">
+                    <FileIcon className="h-6 w-6 text-green-600" />
+                  </div>
+                  <span className="font-medium text-slate-800">{file.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFile(null)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <p className="mt-3 text-sm text-red-500 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {error}
+            </p>
+          )}
+
+          {file && !error && (
+            <Button
+              className="w-full bg-primary hover:bg-primary/90 my-4 rounded-lg font-medium text-white py-6"
+              onClick={() => handleUpload(file)}
+              disabled={isUploading}
+            >
+              {isUploading ? 'Processing...' : 'Analyze Contract Now'}
+            </Button>
+          )}
+
+          <div className="mt-4 text-center">
+            <p className="text-xs text-slate-500">
+              By uploading, you agree to our <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>
+            </p>
+          </div>
+        </div>
       </div>
 
       <ProcessingModal

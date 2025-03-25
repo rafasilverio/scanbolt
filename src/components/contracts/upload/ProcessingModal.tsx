@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FileText, CheckCircle, Clock } from 'lucide-react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
@@ -12,42 +12,66 @@ interface ProcessingModalProps {
 
 export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: ProcessingModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [displayedProgress, setDisplayedProgress] = useState(0);
+  const lastProgressRef = useRef(0);
   
   const steps = [
     "Scanning document",
     "Identifying key clauses",
     "Analyzing terms",
     "Checking for risks",
-    "Generating Corrections and New Clauses"
+    "Generating improvements"
   ];
 
-  // Reset step when modal opens
+  // Ensure progress is always moving forward
+  useEffect(() => {
+    if (uploadProgress > lastProgressRef.current) {
+      lastProgressRef.current = uploadProgress;
+      setDisplayedProgress(uploadProgress);
+    }
+  }, [uploadProgress]);
+
+  // Reset only when modal first opens
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep(0);
+      // Only reset if it was previously closed
+      if (lastProgressRef.current === 0) {
+        setCurrentStep(0);
+        setDisplayedProgress(0);
+      }
+    } else {
+      // Reset when modal closes completely
+      lastProgressRef.current = 0;
     }
   }, [isOpen]);
 
-  // Update steps based on progress
+  // Update steps based on progress - never go backward in steps
   useEffect(() => {
-    // Mapear o progresso para os passos
-    if (uploadProgress <= 10) {
-      setCurrentStep(0); // Scanning document
-    } else if (uploadProgress <= 30) {
-      setCurrentStep(1); // Identifying key clauses
-    } else if (uploadProgress <= 50) {
-      setCurrentStep(2); // Analyzing terms
-    } else if (uploadProgress <= 70) {
-      setCurrentStep(3); // Checking for risks
+    // Map progress to steps with thresholds
+    let newStep = 0;
+    
+    if (displayedProgress <= 15) {
+      newStep = 0; // Scanning document
+    } else if (displayedProgress <= 35) {
+      newStep = 1; // Identifying key clauses
+    } else if (displayedProgress <= 60) {
+      newStep = 2; // Analyzing terms
+    } else if (displayedProgress <= 80) {
+      newStep = 3; // Checking for risks
     } else {
-      setCurrentStep(4); // Generating Corrections
+      newStep = 4; // Generating improvements
     }
-  }, [uploadProgress]);
+    
+    // Only update if stepping forward
+    if (newStep > currentStep) {
+      setCurrentStep(newStep);
+    }
+  }, [displayedProgress, currentStep]);
 
   // Calculate time remaining
   const getTimeRemaining = () => {
     const totalTime = 30; // Total expected seconds
-    const remainingTime = Math.ceil((totalTime * (100 - uploadProgress)) / 100);
+    const remainingTime = Math.ceil((totalTime * (100 - displayedProgress)) / 100);
     return Math.max(remainingTime, 0);
   };
 
@@ -58,7 +82,7 @@ export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: 
       modal={true}
     >
       <DialogContent 
-        className="sm:max-w-xl bg-gradient-to-b from-indigo-950 to-indigo-900 text-white border-0"
+        className="sm:max-w-xl bg-gradient-to-b from-slate-900 to-primary text-white border-0 rounded-xl shadow-2xl"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -73,10 +97,10 @@ export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: 
           </div>
 
           {/* Progress Bar */}
-          <div className="relative w-full h-2 bg-white/10 rounded-full mb-8 overflow-hidden">
+          <div className="relative w-full h-3 bg-white/10 rounded-full mb-8 overflow-hidden">
             <div 
-              className="absolute left-0 top-0 h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${uploadProgress}%` }}
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${displayedProgress}%` }}
             />
           </div>
 
@@ -105,7 +129,7 @@ export function ProcessingModal({ isOpen, onCancel, progress: uploadProgress }: 
           <div className="mt-8 pt-6 border-t border-white/10">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-blue-400">{Math.round(uploadProgress)}%</div>
+                <div className="text-2xl font-bold text-blue-400">{Math.round(displayedProgress)}%</div>
                 <div className="text-sm text-white/60">Complete</div>
               </div>
               <div>
