@@ -11544,6 +11544,462 @@ Read file: /Users/rafasilverio/sites/scancontract/src/components/contracts/uploa
 
 ---
 
+```diff
+    const [uploadStep, setUploadStep] = useState('');
+    const [contractId, setContractId] = useState<string>('');
++   const [showProcessingModal, setShowProcessingModal] = useState(false);
+    const { toast } = useToast();
+    const router = useRouter();
+  
+      setIsUploading(true);
++     setShowProcessingModal(true);
+      setUploadProgress(0);
+      setUploadStep('Preparando arquivo...');
+          variant: 'destructive',
+        });
++       setShowProcessingModal(false);
+      } finally {
+        setIsUploading(false);
+-       setUploadProgress(0);
+-       setUploadStep('');
++       // Não resetamos o progresso nem fechamos o modal aqui,
++       // ele continuará visível durante o redirecionamento
+      }
+    }, [toast, router]);
+  
+        <ProcessingModal
+-         open={isUploading}
+-         onOpenChange={setIsUploading}
++         open={showProcessingModal}
++         onOpenChange={setShowProcessingModal}
+          uploadProgress={uploadProgress}
+          uploadStep={uploadStep}
+```
+
+---
+
+Pronto! Fiz duas mudanças importantes para garantir que o modal de processamento fique visível por mais tempo:
+
+1. **Aumentei o delay de redirecionamento para 3 segundos**:
+   - O tempo foi ampliado de 1,5 para 3 segundos, dando mais tempo para visualizar o modal antes do redirecionamento para a página do contrato.
+
+2. **Separei o controle do modal da variável de upload**:
+   - Criei um estado separado `showProcessingModal` para controlar a visibilidade do modal
+   - Isso permite que o modal permaneça visível mesmo após o upload terminar
+   - O modal agora não fechará automaticamente no bloco `finally`
+
+Com essas alterações, o fluxo será:
+1. O usuário faz upload de um arquivo
+2. O modal de processamento aparece 
+3. Após o upload ser concluído, o modal permanece visível com a barra de progresso a 100%
+4. Após 3 segundos, o usuário é redirecionado para a página do contrato
+5. O modal continuará aberto durante o redirecionamento e só fechará quando o status do contrato indicar que a análise foi concluída
+
+Essas mudanças darão tempo suficiente para o usuário ver o modal antes e depois do redirecionamento, oferecendo uma experiência de usuário mais clara e fluida.
+
+---
+
+_**User**_
+
+Legal, melhorou o fluxo!
+
+Mas Agora o Modal fecha após o redirect para /contracts/[id] e não abre mais.
+
+É possível fazer algo para que ele abra novamente no /contracts/[id]. até finalizar a analise das issues?
+
+---
+
+_**Assistant**_
+
+Vamos implementar uma solução para que o modal reabra na página `/contracts/[id]` e permaneça até que a análise seja concluída. Precisamos criar um componente na página de detalhes do contrato que verifique se há um processamento em andamento.
+
+---
+
+<details>
+            <summary>Searched codebase "contracts/[id]/page.tsx" • **3** results</summary>
+        
+| File |
+|------|
+| `undefined` |
+| `undefined` |
+| `undefined` |
+
+</details>
+
+---
+
+Read file: /Users/rafasilverio/sites/scancontract/src/app/(protected)/contracts/[id]/page.tsx
+
+---
+
+<details>
+            <summary>Grep search for "localStorage.*"processingContractId"" • **3** files</summary>
+        
+| File | Line | Match |
+|------|------|-------|
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L46 | `const storedContractId = localStorage.getItem("processingContractId");` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L50 | `localStorage.setItem("processingContractId", contractId);` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L75 | `localStorage.getItem("processingContractId") : null);` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L98 | `localStorage.removeItem("processingContractId");` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L269 | `{(contractId || localStorage.getItem("processingContractId")) && (` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L272 | `Contract ID: {contractId || localStorage.getItem("processingContractId")}` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L10891 | `+       const storedContractId = localStorage.getItem("processingContractId");` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L10895 | `+         localStorage.setItem("processingContractId", contractId);` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L10910 | `+         localStorage.getItem("processingContractId") : null);` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L10935 | `+               localStorage.removeItem("processingContractId");` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L11029 | `+           {(contractId || localStorage.getItem("processingContractId")) && (` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L11033 | `+                 ID do contrato: {contractId || localStorage.getItem("processingContractId")}` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L11201 | `+       const storedContractId = localStorage.getItem("processingContractId");` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L11205 | `+         localStorage.setItem("processingContractId", contractId);` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L11227 | `+         localStorage.getItem("processingContractId") : null);` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L11250 | `+               localStorage.removeItem("processingContractId");` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L11456 | `+             {(contractId || localStorage.getItem("processingContractId")) && (` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L11459 | `+                   Contract ID: {contractId || localStorage.getItem("processingContractId")}` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L46 | `const storedContractId = localStorage.getItem("processingContractId");` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L50 | `localStorage.setItem("processingContractId", contractId);` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L75 | `localStorage.getItem("processingContractId") : null);` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L98 | `localStorage.removeItem("processingContractId");` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L269 | `{(contractId || localStorage.getItem("processingContractId")) && (` |
+| `file:///Users/rafasilverio/sites/scancontract/src/components/contracts/upload/ProcessingModal.tsx` | L272 | `Contract ID: {contractId || localStorage.getItem("processingContractId")}` |
+
+</details>
+
+---
+
+Agora, vamos criar um componente `ContractProcessingMonitor` para monitorar e exibir o modal na página de detalhes do contrato:
+
+---
+
+```diff
+  'use client';
+  
+- import { useState, useEffect } from 'react';
+- import { Progress } from '@/components/ui/progress';
+- import { toast } from 'sonner';
++ import { useEffect, useState } from 'react';
++ import { useParams } from 'next/navigation';
++ import ProcessingModal from './upload/ProcessingModal';
+  
+  interface ContractProcessingMonitorProps {
+-   contractId: string;
+-   initialStatus: string;
+-   onComplete?: () => void;
++   initialStatus?: string;
+  }
+  
+- export function ContractProcessingMonitor({
+-   contractId,
+-   initialStatus,
+-   onComplete
++ export default function ContractProcessingMonitor({ 
++   initialStatus 
+  }: ContractProcessingMonitorProps) {
+-   const [status, setStatus] = useState(initialStatus);
+-   const [progress, setProgress] = useState(initialStatus === 'UNDER_REVIEW' ? 100 : 35);
+-   const [isComplete, setIsComplete] = useState(initialStatus === 'UNDER_REVIEW');
+- 
++   const params = useParams();
++   const [showModal, setShowModal] = useState(false);
++   const [isComplete, setIsComplete] = useState(false);
++   const [uploadProgress, setUploadProgress] = useState(100); // Já está na página do contrato, então o upload está 100%
++   
++   // Checar se este contrato está em processamento ao montar o componente
+    useEffect(() => {
+-     if (isComplete) return;
+- 
+-     // Simular progresso visual enquanto aguarda
+-     const progressInterval = setInterval(() => {
+-       setProgress(prev => {
+-         // Limitar o progresso máximo a 95% até que a análise seja concluída
+-         if (prev < 95) {
+-           return prev + 0.2;
+-         }
+-         return prev;
+-       });
+-     }, 300);
+- 
+-     // Verificar o status do contrato periodicamente
+-     const statusInterval = setInterval(async () => {
+-       try {
+-         const response = await fetch(`/api/contracts/${contractId}/status`);
+-         const data = await response.json();
+-         
+-         setStatus(data.status);
+-         
+-         if (data.status === 'UNDER_REVIEW') {
+-           clearInterval(progressInterval);
+-           clearInterval(statusInterval);
+-           setProgress(100);
+-           setIsComplete(true);
+-           toast.success('Contract analysis complete!');
+-           if (onComplete) onComplete();
+-         } else if (data.status === 'ERROR') {
+-           clearInterval(progressInterval);
+-           clearInterval(statusInterval);
+-           toast.error('Error analyzing contract. Please try again.');
+-         }
+-       } catch (error) {
+-         console.error('Error checking contract status:', error);
+-       }
+-     }, 5000); // Verificar a cada 5 segundos
+- 
+-     return () => {
+-       clearInterval(progressInterval);
+-       clearInterval(statusInterval);
+-     };
+-   }, [contractId, isComplete, onComplete]);
+- 
+-   if (isComplete) return null;
+- 
++     if (typeof window !== 'undefined') {
++       const contractId = params.id as string;
++       const processingId = localStorage.getItem('processingContractId');
++       
++       // Se o ID do contrato atual corresponde ao que está em processamento, mostra o modal
++       if (contractId && processingId && contractId === processingId) {
++         setShowModal(true);
++       }
++       
++       // Se o status inicial indica que o processamento já foi concluído, não mostrar modal
++       if (initialStatus === 'under_review' || initialStatus === 'approved') {
++         setIsComplete(true);
++       }
++     }
++   }, [params.id, initialStatus]);
++   
+    return (
+-     <div className="w-full p-4 bg-blue-900/20 rounded-lg mb-6">
+-       <div className="mb-2 flex justify-between items-center">
+-         <h3 className="text-white font-medium">Analyzing your contract</h3>
+-         <span className="text-sm text-blue-300">{Math.round(progress)}%</span>
+-       </div>
+-       <Progress value={progress} className="h-2 mb-2" />
+-       <p className="text-sm text-blue-300">
+-         {status === 'UPLOADING' && 'Uploading your contract...'}
+-         {status === 'PROCESSING' && 'Processing your contract...'}
+-         {status === 'ANALYZING' && 'AI is analyzing your contract...'}
+-         {status === 'ERROR' && 'Error analyzing your contract. Please try again.'}
+-       </p>
+-     </div>
++     <>
++       {showModal && (
++         <ProcessingModal
++           open={showModal}
++           onOpenChange={setShowModal}
++           uploadProgress={uploadProgress}
++           uploadStep="Analyzing contract..."
++           contractId={params.id as string}
++         />
++       )}
++     </>
+    );
+  }
+```
+
+---
+
+Agora, vamos integrar o monitor na página de detalhes do contrato:
+
+---
+
+```diff
+  import { NewContractContent } from '@/components/contracts/NewContractContent';
+  import { CheckCircle } from 'lucide-react';
++ import ContractProcessingMonitor from '@/components/contracts/ContractProcessingMonitor';
+  
+  export default function ContractPage() {
+    return (
+      <div className="flex flex-col h-screen">
++       <ContractProcessingMonitor initialStatus={contract?.status} />
++ 
+        <div className="flex-none w-full px-4 py-4 relative">
+          <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+```
+
+---
+
+Também precisamos fazer uma pequena modificação no `ProcessingModal` para garantir que ele verifique corretamente o status do contrato:
+
+---
+
+```diff
+            const data = await res.json();
+            
++           // Considerar análise completa quando o status for under_review ou approved
++           // E quando houver issues (garantindo que a análise foi realmente concluída)
++           const analysisComplete = 
++             (data.status === 'under_review' || data.status === 'approved') && 
++             data.isAnalysisComplete;
++             
+            // Se a análise estiver completa, incrementamos o contador de verificações consecutivas
+-           if (data.isAnalysisComplete) {
++           if (analysisComplete) {
+              setConsecutiveCompletionChecks(prev => prev + 1);
+            } else {
+```
+
+---
+
+Agora, vamos garantir que o componente `ContractProcessingMonitor` seja adicionado à página corretamente, verificando se já existe o arquivo e ajustando sua implementação se necessário:
+
+---
+
+Cancelled
+
+---
+
+_**User**_
+
+ótimo!
+
+Unica coisa que faltou foi no momento em que o ContractProcessingMonitor fecha por conta do status ele não atualiza a página /contract/[id] é possível ele dar um refresh na pagina?
+
+---
+
+_**Assistant**_
+
+Vamos modificar o `ContractProcessingMonitor` para atualizar a página quando o modal for fechado após o processamento ser concluído.
+
+---
+
+```diff
+  
+  import { useEffect, useState } from 'react';
+- import { useParams } from 'next/navigation';
++ import { useParams, useRouter } from 'next/navigation';
+  import ProcessingModal from './upload/ProcessingModal';
+  
+  }: ContractProcessingMonitorProps) {
+    const params = useParams();
++   const router = useRouter();
+    const [showModal, setShowModal] = useState(false);
+    const [isComplete, setIsComplete] = useState(false);
+      }
+    }, [params.id, initialStatus]);
++   
++   // Atualizar a página quando o modal for fechado após a conclusão
++   const handleModalChange = (open: boolean) => {
++     // Se o modal estava aberto e agora está fechando
++     if (showModal && !open) {
++       setShowModal(false);
++       
++       // Verificar se o processamento foi concluído
++       const checkIfComplete = async () => {
++         try {
++           const res = await fetch(`/api/contracts/${params.id}/status`);
++           const data = await res.json();
++           
++           if (data.isAnalysisComplete) {
++             // Se a análise foi concluída, atualizar a página para mostrar os resultados
++             router.refresh();
++           }
++         } catch (error) {
++           console.error('Error checking contract completion status:', error);
++         }
++       };
++       
++       checkIfComplete();
++     } else {
++       setShowModal(open);
++     }
++   };
+    
+    return (
+          <ProcessingModal
+            open={showModal}
+-           onOpenChange={setShowModal}
++           onOpenChange={handleModalChange}
+            uploadProgress={uploadProgress}
+            uploadStep="Analyzing contract..."
+```
+
+---
+
+```diff
+                localStorage.removeItem("processingContractId");
+              }
++             
++             // Força um refresh antes de fechar o modal
+              router.refresh();
++             
+              setTimeout(() => {
+                onOpenChange(false);
++               
++               // Força um segundo refresh para garantir que a página atualize com os novos dados
++               setTimeout(() => {
++                 router.refresh();
++               }, 500);
+              }, 1500); // Delay adicional para garantir que a página esteja totalmente carregada
+            }
+```
+
+---
+
+Perfeito! Implementei uma solução completa para garantir que a página seja atualizada quando o modal for fechado após a conclusão da análise:
+
+1. **No `ContractProcessingMonitor`**:
+   - Adicionei um manipulador personalizado `handleModalChange` que verifica quando o modal está sendo fechado
+   - Quando o modal fecha, o componente faz uma verificação final do status do contrato
+   - Se a análise estiver completa, ele força um refresh na página
+
+2. **No `ProcessingModal`**:
+   - Implementei um "refresh duplo" para garantir que a página seja atualizada com os novos dados
+   - O primeiro refresh acontece antes do modal fechar
+   - O segundo refresh acontece 500ms após o modal fechar, garantindo que os novos dados sejam carregados
+
+Esta abordagem resolve o problema de várias maneiras:
+- O refresh acontece no momento certo (quando a análise está completa)
+- Um segundo refresh acontece após o modal fechar completamente
+- A verificação no `ContractProcessingMonitor` proporciona uma redundância adicional
+
+Agora, quando o modal for fechado após a conclusão da análise, a página `/contracts/[id]` será atualizada automaticamente para mostrar os resultados mais recentes, sem a necessidade de atualização manual pelo usuário.
+
+---
+
+_**User**_
+
+certo, ao invés de dar um refresh, vamos enviar o usuario para o cotract/[id]/revision
+Deve ser algo assim quando se usa
+
+async () => {
+    if (!contract?.id) return;
+    router.push(`/contracts/${contract.id}/revision`);
+  };
+
+---
+
+_**Assistant**_
+
+Vamos atualizar o código para redirecionar o usuário para a página `/contracts/[id]/revision` quando a análise for concluída, em vez de apenas atualizar a página:
+
+---
+
+```diff
+              }
+              
+-             // Força um refresh antes de fechar o modal
+-             router.refresh();
+-             
++             // Mostra mensagem de conclusão por um momento antes de redirecionar
+              setTimeout(() => {
+                onOpenChange(false);
+                
+-               // Força um segundo refresh para garantir que a página atualize com os novos dados
+-               setTimeout(() => {
+-                 router.refresh();
+-               }, 500);
+-             }, 1500); // Delay adicional para garantir que a página esteja totalmente carregada
++               // Redireciona para a página de revisão do contrato
++               if (idToCheck) {
++                 router.push(`/contracts/${idToCheck}/revision`);
++               }
++             }, 1500); // Delay para mostrar a mensagem de conclusão
+            }
+          } catch (error) {
+```
+
+---
+
 Cancelled
 
 ---

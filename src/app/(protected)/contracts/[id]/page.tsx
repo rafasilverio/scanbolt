@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ReviewSummary } from '@/components/contracts/ReviewSummary';
 import { NewContractContent } from '@/components/contracts/NewContractContent';
 import { CheckCircle } from 'lucide-react';
+import ContractProcessingMonitor from '@/components/contracts/ContractProcessingMonitor';
 
 export default function ContractPage() {
   const params = useParams();
@@ -139,6 +140,8 @@ export default function ContractPage() {
 
   return (
     <div className="flex flex-col h-screen">
+      <ContractProcessingMonitor initialStatus={contract?.status} />
+
       <div className="flex-none w-full px-4 py-4 relative">
         <div className="max-w-7xl mx-auto space-y-6 relative z-10">
           <div className="rounded-3xl p-8 sm:p-10 border border-white/10 shadow-xl bg-gradient-to-b from-indigo-950/80 to-gray-900/90">

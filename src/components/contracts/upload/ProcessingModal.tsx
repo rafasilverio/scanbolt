@@ -84,8 +84,14 @@ export default function ProcessingModal({
           
           const data = await res.json();
           
+          // Considerar análise completa quando o status for under_review ou approved
+          // E quando houver issues (garantindo que a análise foi realmente concluída)
+          const analysisComplete = 
+            (data.status === 'under_review' || data.status === 'approved') && 
+            data.isAnalysisComplete;
+            
           // Se a análise estiver completa, incrementamos o contador de verificações consecutivas
-          if (data.isAnalysisComplete) {
+          if (analysisComplete) {
             setConsecutiveCompletionChecks(prev => prev + 1);
           } else {
             setConsecutiveCompletionChecks(0);
@@ -98,9 +104,17 @@ export default function ProcessingModal({
             if (typeof window !== "undefined") {
               localStorage.removeItem("processingContractId");
             }
+            
+            // Força um refresh antes de fechar o modal
             router.refresh();
+            
             setTimeout(() => {
               onOpenChange(false);
+              
+              // Força um segundo refresh para garantir que a página atualize com os novos dados
+              setTimeout(() => {
+                router.refresh();
+              }, 500);
             }, 1500); // Delay adicional para garantir que a página esteja totalmente carregada
           }
         } catch (error) {
