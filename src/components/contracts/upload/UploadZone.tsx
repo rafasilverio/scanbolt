@@ -13,6 +13,7 @@ export function UploadZone() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStep, setUploadStep] = useState('');
   const [contractId, setContractId] = useState<string>('');
+  const [showProcessingModal, setShowProcessingModal] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -21,6 +22,7 @@ export function UploadZone() {
     if (!file) return;
 
     setIsUploading(true);
+    setShowProcessingModal(true);
     setUploadProgress(0);
     setUploadStep('Preparando arquivo...');
 
@@ -44,10 +46,11 @@ export function UploadZone() {
         setUploadProgress(100);
         setUploadStep('Arquivo enviado com sucesso! Redirecionando...');
         
-        // Redireciona após 1.5 segundos para dar tempo do usuário ver a mensagem
+        // Adicionar atraso de 3 segundos antes de redirecionar
+        // Isso dará tempo para o usuário ver o modal de processamento
         setTimeout(() => {
           router.push(`/contracts/${data.contract.id}`);
-        }, 1500);
+        }, 3000);
       }
     } catch (error) {
       console.error('Erro no upload:', error);
@@ -56,10 +59,11 @@ export function UploadZone() {
         description: 'Não foi possível fazer o upload do arquivo. Tente novamente.',
         variant: 'destructive',
       });
+      setShowProcessingModal(false);
     } finally {
       setIsUploading(false);
-      setUploadProgress(0);
-      setUploadStep('');
+      // Não resetamos o progresso nem fechamos o modal aqui,
+      // ele continuará visível durante o redirecionamento
     }
   }, [toast, router]);
 
@@ -113,8 +117,8 @@ export function UploadZone() {
       </div>
 
       <ProcessingModal
-        open={isUploading}
-        onOpenChange={setIsUploading}
+        open={showProcessingModal}
+        onOpenChange={setShowProcessingModal}
         uploadProgress={uploadProgress}
         uploadStep={uploadStep}
         contractId={contractId}
