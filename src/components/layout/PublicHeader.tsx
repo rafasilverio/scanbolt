@@ -44,7 +44,7 @@ export function PublicHeader() {
                   </Button>
                 </Link>
                 <Link href="/auth/register">
-                  <Button className="bg-white text-primary hover:bg-gray-100">
+                  <Button className="bg-yellow-500 text-black hover:bg-yellow-600">
                     Get Started
                   </Button>
                 </Link>

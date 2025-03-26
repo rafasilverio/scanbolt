@@ -9916,6 +9916,374 @@ Funcionou! Mas houve um pequeno erro na url assim que o contrato subiu, veja no 
 
 ---
 
+_**Assistant**_
+
+Analisando o log, vejo que o texto está sendo extraído corretamente, mas há um erro ao tentar decodificar o `originalText` dos issues:
+
+```
+Failed to decode issue originalText URIError: URI malformed
+    at decodeURIComponent (<anonymous>)
+    at /Users/rafasilverio/sites/scancontract/src/lib/ai.common.js:90:26
+```
+
+Este erro ocorre quando o texto já não está em formato URI encoded, mas tentamos decodificá-lo com `decodeURIComponent()`. Vamos ajustar a função em `ai.common.js` para lidar com isso de forma mais robusta:
+
+---
+
+```diff
+      const processedIssues = analysis.issues.map((issue) => {
+        // Tenta decodificar o originalText se estiver codificado em URL
+-       let originalText = issue.originalText;
++       let originalText = issue.originalText || '';
++       
++       // Verifica se o texto parece estar codificado em URL (contém % seguido de dois caracteres hexadecimais)
++       if (originalText.includes('%') && /%.{2}/.test(originalText)) {
+          try {
+-         if (originalText.includes('%')) {
+            originalText = decodeURIComponent(originalText);
++         } catch (e) {
++           console.warn('Failed to decode issue originalText, using original version');
++           // Continua usando a versão original
+          }
+-       } catch (e) {
+-         console.warn('Failed to decode issue originalText', e);
+        }
+        
+        // Procura pelas coordenadas do texto, tentando com o texto original e decodificado
+        const coordinates = textCoordinates.get(originalText.trim()) || 
+-                           textCoordinates.get(issue.originalText.trim());
++                           textCoordinates.get(issue.originalText?.trim() || '') || 
++                           null;
+        
+        return {
+          ...issue,
+          id: issue.id || crypto.randomUUID(),
+          status: 'pending',
+-         originalText: originalText, // Usa o texto decodificado
++         originalText: originalText, // Usa o texto processado
+          position: {
+            ...issue.position,
+```
+
+---
+
+Agora também vamos ajustar o processamento de texto no worker.js para ser mais robusto:
+
+---
+
+```diff
+      function preprocessContractText(text) {
+        try {
+-         // Tenta decodificar o texto (resolve caracteres como %20, %C3%A7, etc.)
+-         const decodedText = decodeURIComponent(text);
++         let decodedText = text;
++         
++         // Só tenta decodificar se o texto parece estar codificado em URL
++         if (text.includes('%') && /%.{2}/.test(text)) {
++           try {
++             decodedText = decodeURIComponent(text);
++           } catch (decodeError) {
++             console.warn('Failed to decode text, using original version');
++             // Continua usando a versão original
++           }
++         }
+          
+          // Normaliza quebras de linha e formato do texto
+            .trim();
+        } catch (e) {
+-         console.error('Error decoding text:', e);
+-         // Se não conseguir decodificar, tenta apenas normalizar o texto original
+-         return text
+-           .replace(/\r\n|\r|\n/g, '\n')
+-           .replace(/\n{2,}/g, '\n\n')
+-           .replace(/([^\n])\n([^\n])/g, '$1 $2')
+-           .replace(/(\.|\!|\?)(\s*)([A-Z])/g, '$1\n\n$3')
+-           .trim();
++         console.error('Error processing text:', e);
++         // Se não conseguir processar, retorna o texto original
++         return text;
+        }
+      }
+```
+
+---
+
+Também vamos fazer uma pequena melhoria na extração de texto do PDF para melhorar a decodificação:
+
+---
+
+```diff
+            page.Texts.forEach((item) => {
+              try {
+-               // Obter e decodificar o texto do PDF
++               // Obter o texto do PDF
+                const encodedText = item.R.map(r => r.T).join('');
+-               const text = decodeURIComponent(encodedText);
++               let text = encodedText;
++               
++               // Só tenta decodificar se parece estar codificado
++               if (encodedText.includes('%') && /%.{2}/.test(encodedText)) {
++                 try {
++                   text = decodeURIComponent(encodedText);
++                 } catch (decodeError) {
++                   console.warn('Could not decode text, using raw version');
++                 }
++               }
+                
+                if (text.trim()) {
+```
+
+---
+
+Vamos reiniciar o worker para aplicar essas alterações:
+
+---
+
+```bash
+cd /Users/rafasilverio/sites/scancontract && killall node
+```
+
+```
+rafasilverio@MacBook-Air-de-Rafa scancontract % 
+
+```
+
+---
+
+Cancelled
+
+---
+
+_**User**_
+
+Agora chat vamos melhorar a UI com a nossa nova logo na Home e dentro da Dashboard do produto.
+
+Use o as logos no @.screens e ajuste por favor.
+
+---
+
+_**Assistant**_
+
+Vamos atualizar a UI do produto com as novas logos. Primeiro, precisamos verificar os arquivos relacionados à home e à dashboard:
+
+---
+
+<details>
+            <summary>Searched codebase "logo header navbar" • **10** results</summary>
+        
+| File |
+|------|
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+
+</details>
+
+---
+
+<details>
+            <summary>Searched codebase "dashboard header layout" • **2** results</summary>
+        
+| File |
+|------|
+| `undefined` |
+| `undefined` |
+
+</details>
+
+---
+
+Read file: src/components/layout/Navigation.tsx
+
+---
+
+Read file: src/components/layout/DashboardHeader.tsx
+
+---
+
+Read file: src/app/(protected)/dashboard/page.tsx
+
+---
+
+<details>
+            <summary>Searched codebase "home page landing" • **10** results</summary>
+        
+| File |
+|------|
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+| `undefined` |
+
+</details>
+
+---
+
+Read file: src/app/page.tsx
+
+---
+
+```diff
+          <div className="flex items-center h-16">
+            <Link href="/dashboard" className="flex items-center mr-8">
+-             <span className="text-xl font-bold">
+-               Scancontract
+-             </span>
++             <img 
++               src="/.screens/logo horizontal white big.png" 
++               alt="Scancontract Logo" 
++               className="h-8"
++             />
+            </Link>
+  
+```
+
+---
+
+```diff
+            <div className="flex items-center justify-between h-16">
+              <Link href="/" className="font-bold text-xl text-primary flex items-center">
+-               <span className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">ScanContract</span>
++               <img 
++                 src="/.screens/logo horizontal purple big.png" 
++                 alt="ScanContract Logo" 
++                 className="h-8" 
++               />
+              </Link>
+              
+```
+
+---
+
+```diff
+          {/* Content */}
+          <div className="relative z-10 max-w-3xl">
+-           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-sm font-medium mb-4">
+-             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+-             Free AI Contract Analysis
++           <div className="flex items-center mb-6">
++             <img 
++               src="/.screens/logo icon white big.png" 
++               alt="Scancontract Logo" 
++               className="h-12 mr-4" 
++             />
++             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-sm font-medium">
++               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
++               Free AI Contract Analysis
++             </div>
+            </div>
+            
+```
+
+---
+
+```diff
+                </div>
+              </div>
++ 
++             <div className="flex justify-center mb-6">
++               <img 
++                 src="/.screens/logo icon purple big.png" 
++                 alt="ScanContract Logo" 
++                 className="h-24"
++               />
++             </div>
+  
+              <h1 className="text-4xl md:text-6xl font-bold mb-6">
+```
+
+---
+
+The logos have been successfully integrated into the application. Here's what was updated:
+
+1. **Dashboard Header**: Replaced the text "Scancontract" with the white horizontal logo in the navigation bar.
+
+2. **Home Page Navigation**: Updated the home page navigation to use the purple horizontal logo instead of the text with gradient.
+
+3. **Dashboard Welcome Section**: Added the white icon logo next to the "Free AI Contract Analysis" badge, creating a more branded experience.
+
+4. **Home Page Hero Section**: Added a prominent purple icon logo above the main heading to increase brand visibility.
+
+These changes maintain the original design and functionality while incorporating the new brand assets. The logos now provide visual consistency across the application and enhance the professional appearance of both the dashboard and home page.
+
+---
+
+_**User**_
+
+legal, adicionei todas elas na pasta public
+
+---
+
+_**Assistant**_
+
+```diff
+            <Link href="/dashboard" className="flex items-center mr-8">
+              <img 
+-               src="/.screens/logo horizontal white big.png" 
++               src="/logo horizontal white big.png" 
+                alt="Scancontract Logo" 
+                className="h-8"
+```
+
+---
+
+```diff
+              <Link href="/" className="font-bold text-xl text-primary flex items-center">
+                <img 
+-                 src="/.screens/logo horizontal purple big.png" 
++                 src="/logo horizontal purple big.png" 
+                  alt="ScanContract Logo" 
+                  className="h-8" 
+              <div className="flex justify-center mb-6">
+                <img 
+-                 src="/.screens/logo icon purple big.png" 
++                 src="/logo icon purple big.png" 
+                  alt="ScanContract Logo" 
+                  className="h-24"
+```
+
+---
+
+```diff
+            <div className="flex items-center mb-6">
+              <img 
+-               src="/.screens/logo icon white big.png" 
++               src="/logo icon white big.png" 
+                alt="Scancontract Logo" 
+                className="h-12 mr-4" 
+```
+
+---
+
+Os caminhos dos logos foram atualizados com sucesso para usar a pasta public. Agora todas as imagens serão carregadas corretamente do diretório public, onde você adicionou os arquivos.
+
+---
+
+_**User**_
+
+Por favor atualize dentro da @Header.tsx   tambem
+
+---
+
+_**Assistant**_
+
+
+
+---
+
 
 
 ---

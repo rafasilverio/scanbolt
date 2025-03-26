@@ -172,9 +172,9 @@ export function PreviewUploader() {
                   <Button
                     variant="default"
                     onClick={() => document.getElementById('preview-upload')?.click()}
-                    className="bg-primary hover:bg-primary/90 px-6 py-5 text-base"
+                    className="bg-yellow-500 hover:bg-yellow-600 px-6 py-5 text-base"
                   >
-                    Browse files
+                    Upload Contract Now!
                   </Button>
                   <input
                     id="preview-upload"
@@ -185,9 +185,6 @@ export function PreviewUploader() {
                     disabled={loading}
                   />
                 </div>
-                <p className="text-sm text-slate-500 mt-4">
-                  Supported formats: PDF, DOC, DOCX, TXT (max 10MB)
-                </p>
               </div>
             ) : (
               <div className="space-y-4 py-4">

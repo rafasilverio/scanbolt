@@ -80,10 +80,11 @@ export function Header() {
         <div className="flex items-center gap-8">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <span className="text-[#5000f7] font-bold text-lg">S</span>
-            </div>
-            <span className="font-semibold text-xl text-white">Scancontract</span>
+            <img 
+              src="/logo horizontal white big.png" 
+              alt="Scancontract Logo" 
+              className="h-8"
+            />
           </Link>
 
           {/* Navigation */}

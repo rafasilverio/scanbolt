@@ -53,9 +53,16 @@ export default function DashboardPage() {
         
         {/* Content */}
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-sm font-medium mb-4">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            Free AI Contract Analysis
+          <div className="flex items-center mb-6">
+            <img 
+              src="/logo icon white big.png" 
+              alt="Scancontract Logo" 
+              className="h-12 mr-4" 
+            />
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-sm font-medium">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              Free AI Contract Analysis
+            </div>
           </div>
           
           <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
@@ -91,9 +98,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Nova seção de Upload usando UploadZone */}
-      <div className="bg-gradient-to-b from-indigo-950 to-indigo-900 rounded-2xl shadow-xl border border-white/20 p-8">
-        <UploadZone />
-      </div>
+      <UploadZone />
 
       
       {/* Search and Actions */}

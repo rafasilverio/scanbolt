@@ -72,20 +72,21 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="font-bold text-xl text-primary flex items-center">
-              <span className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">ScanContract</span>
+              <img 
+                src="/logo horizontal purple big.png" 
+                alt="ScanContract Logo" 
+                className="h-8" 
+              />
             </Link>
             
             <div className="hidden md:flex items-center gap-6">
-              <Link href="/features" className="text-sm text-slate-600 hover:text-primary transition-colors">
+              <Link href="/#" className="text-sm text-slate-600 hover:text-primary transition-colors">
                 Features
               </Link>
-              <Link href="/pricing" className="text-sm text-slate-600 hover:text-primary transition-colors">
+              <Link href="/#" className="text-sm text-slate-600 hover:text-primary transition-colors">
                 Pricing
               </Link>
-              <Link href="/blog" className="text-sm text-slate-600 hover:text-primary transition-colors">
-                Blog
-              </Link>
-              <Link href="/faq" className="text-sm text-slate-600 hover:text-primary transition-colors">
+              <Link href="/#" className="text-sm text-slate-600 hover:text-primary transition-colors">
                 FAQ
               </Link>
             </div>
@@ -117,7 +118,7 @@ export default function Home() {
                     Sign In
                   </Link>
                   <Link href="/auth/register">
-                    <Button className="bg-primary hover:bg-primary/90">
+                    <Button className="bg-yellow-500 text-black hover:bg-yellow-600">
                       Get Started
                     </Button>
                   </Link>
@@ -179,6 +180,38 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold mb-6">Fair Clauses for Both Sides</h2>
+              
+              {/* Contract Analysis Animation */}
+              <div className="relative h-32 mb-6 bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-full max-w-md px-4">
+                    {/* Scanning line animation */}
+                    <div className="h-1 bg-yellow-400 animate-pulse rounded-full absolute left-0 right-0 top-1/2 opacity-70"></div>
+                    
+                    {/* Contract text that appears to be analyzed */}
+                    <div className="space-y-2 relative">
+                      <div className="h-2 bg-slate-200 rounded w-3/4 animate-pulse"></div>
+                      <div className="h-2 bg-slate-200 rounded w-full animate-pulse"></div>
+                      <div className="h-2 bg-slate-200 rounded w-5/6 animate-pulse"></div>
+                      <div className="h-2 bg-slate-300 rounded w-2/3 animate-pulse"></div>
+                      <div className="h-2 bg-red-200 rounded w-full animate-pulse"></div>
+                      <div className="h-2 bg-slate-200 rounded w-4/5 animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Overlay with scanning effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-transparent animate-[scan_2s_ease-in-out_infinite]"></div>
+                
+                {/* Status indicators */}
+                <div className="absolute bottom-2 right-3 flex items-center gap-2 text-xs font-medium">
+                  <div className="flex items-center">
+                    <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
+                    <span className="text-green-600">Analyzing</span>
+                  </div>
+                </div>
+              </div>
+              
               <p className="text-slate-600 mb-8">
                 Our AI doesn't just identify problematic clauses - it suggests balanced alternatives that protect everyone's interests. Get professional-level contract review in seconds.
               </p>

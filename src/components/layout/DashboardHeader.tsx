@@ -34,9 +34,11 @@ export function DashboardHeader() {
       <div className="container mx-auto px-4">
         <div className="flex items-center h-16">
           <Link href="/dashboard" className="flex items-center mr-8">
-            <span className="text-xl font-bold">
-              Scancontract
-            </span>
+            <img 
+              src="/logo horizontal white big.png" 
+              alt="Scancontract Logo" 
+              className="h-8"
+            />
           </Link>
 
           <nav className="flex items-center space-x-6">
