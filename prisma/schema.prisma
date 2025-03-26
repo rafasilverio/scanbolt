@@ -25,26 +25,26 @@ model User {
 }
 
 model Contract {
-  id         String   @id @default(uuid()) @db.Uuid
-  title      String
-  content    String
-  status     String
-  fileUrl    String
-  fileName   String
-  fileType   String
-  userId     String   @db.Uuid
-  numPages     Int      @default(1)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  highlights Json @default("[]")
-  changes Json @default("[]")
-  issues Json @default("[]") @db.JsonB    // Alterado de highlights
-  suggestedClauses Json @default("[]") @db.JsonB    // Alterado de changes
-  pdfPositions Json? @db.JsonB
-  metadata Json @default("{\"pageCount\": 1}") @db.JsonB // Novo campo
-  user       User     @relation(fields: [userId], references: [id])
+  id                String   @id @default(cuid())
+  title             String
+  fileUrl           String
+  fileName          String
+  fileType          String
+  content           String   @db.Text
+  issues            Json[]
+  suggestedClauses  Json[]
+  metadata          Json
+  status            String   @default("pending")
+  tempId            String?  @unique
+  numPages          Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([status])
+  @@index([tempId])
 }
 
 model preview_cache {
@@ -71,4 +71,12 @@ enum contract_status {
   under_review
   approved
   rejected
+}
+
+enum ContractStatus {
+  queued
+  processing
+  preview_ready
+  under_review
+  error
 }

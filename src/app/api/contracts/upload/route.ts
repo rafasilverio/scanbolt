@@ -188,29 +188,29 @@ export async function POST(req: NextRequest) {
         title: file.name,
         fileUrl: '', // será atualizado após upload
         fileName: file.name,
-        status: "analyzing",
+        status: "under_review",
         fileType: file.type,
         content: '',  // será atualizado após extração
         issues: [],   // será atualizado após análise
         suggestedClauses: [], // será atualizado após análise
         metadata: {
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         },
         userId: userId,
         numPages: 0   // será atualizado após extração
       }
     });
 
-    // 2. Iniciar processamento em background
-    processContractInBackground(contract.id, file, userId);
+    // 2. Iniciar processamento em background - usar o ID do contrato criado
+    processContractInBackground(file, undefined, userId, contract.id);
 
     // 3. Retornar resposta imediata
     return NextResponse.json({
       success: true,
       contract: {
         id: contract.id,
-        status: "analyzing"
+        status: "under_review"
       }
     });
 

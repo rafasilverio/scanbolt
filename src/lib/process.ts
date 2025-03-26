@@ -2,12 +2,14 @@ import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
 import { analyzeContract } from '@/lib/ai';
 import PDFParser from 'pdf2json';
+import { addToQueue, getQueueStatus } from './queue';
+import prisma from './prisma';
 
-const prisma = new PrismaClient();
+const prismaClient = new PrismaClient();
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 function sanitizeFileName(fileName: string): string {
@@ -132,71 +134,111 @@ async function extractTextContent(file: File): Promise<{
   }
 
 export async function processContractInBackground(
-  contractId: string, 
-  file: File, 
-  userId: string
+  file: File,
+  onProgress?: (progress: number, step: string) => void,
+  userId: string = '',
+  existingContractId?: string
 ) {
   try {
-    // 1. Upload do arquivo para o Supabase
-    const sanitizedFileName = sanitizeFileName(file.name);
-    const uniqueFileName = `${Date.now()}-${sanitizedFileName}`;
-    const buffer = await file.arrayBuffer();
-
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('contracts')
-      .upload(uniqueFileName, buffer, {
-        contentType: file.type,
-        upsert: false
+    // 1. Criar ou usar contrato existente no banco de dados
+    let contract;
+    
+    if (existingContractId) {
+      // Usar contrato existente
+      contract = await prisma.contract.findUnique({
+        where: { id: existingContractId }
       });
+      
+      if (!contract) {
+        throw new Error(`Contrato com ID ${existingContractId} não encontrado`);
+      }
+      
+      console.log(`Usando contrato existente: ${existingContractId}`);
+    } else {
+      // Criar novo contrato
+      contract = await prisma.contract.create({
+        data: {
+          title: file.name,
+          status: 'under_review',
+          fileType: file.type,
+          content: '', // Será preenchido pelo worker
+          issues: [],
+          suggestedClauses: [],
+          metadata: {
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          numPages: 0,
+          fileUrl: '', // Será atualizado após o upload
+          fileName: '', // Será atualizado após o upload
+          userId: userId // Usar o userId fornecido
+        },
+      });
+      
+      console.log(`Criado novo contrato: ${contract.id}`);
+    }
 
-    if (uploadError) throw uploadError;
+    // 2. Upload do arquivo para o Supabase Storage
+    onProgress?.(20, 'Enviando arquivo...');
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${contract.id}.${fileExt}`;
+    const filePath = `contracts/${fileName}`;
 
+    const { error: uploadError } = await supabase.storage
+      .from('contracts')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw new Error('Erro ao fazer upload do arquivo');
+    }
+
+    // 3. Obter URL pública do arquivo
     const { data: { publicUrl } } = supabase.storage
       .from('contracts')
-      .getPublicUrl(uploadData.path);
+      .getPublicUrl(filePath);
 
-    // 2. Extrair texto e coordenadas
-    const { text, numPages, textCoordinates } = await extractTextContent(file);
-
-    // 3. Primeira atualização: URL do arquivo e conteúdo
+    // 4. Atualizar contrato com a URL do arquivo
     await prisma.contract.update({
-      where: { id: contractId },
+      where: { id: contract.id },
       data: {
         fileUrl: publicUrl,
-        content: text,
-        numPages: numPages
-      }
+        fileName: fileName,
+      },
     });
 
-    // 4. Análise do contrato
-    const analysisResult = await analyzeContract(text, textCoordinates);
+    console.log(`Contrato atualizado com URL: ${publicUrl}`);
 
-    // 5. Atualização final com resultados
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        issues: JSON.parse(JSON.stringify(analysisResult.issues)),
-        suggestedClauses: JSON.parse(JSON.stringify(analysisResult.suggestedClauses)),
-        status: "under_review",
-        metadata: {
-          pageCount: numPages,
-          updatedAt: new Date()
-        }
-      }
+    // 5. Converter arquivo para base64
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer).toString('base64');
+
+    // 6. Adicionar job à fila
+    onProgress?.(100, 'Adicionando à fila de processamento...');
+    await addToQueue({
+      contractId: contract.id,
+      fileData: {
+        buffer,
+        name: file.name,
+        type: file.type,
+        size: file.size
+      },
+      userId: userId || '', // Usar o userId fornecido
+      isPreview: false
     });
 
+    return {
+      success: true,
+      contract: {
+        id: contract.id,
+        title: contract.title,
+        status: contract.status,
+      },
+    };
   } catch (error) {
-    console.error('Background processing error:', error);
-    
-    // Atualizar contrato com erro
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        status: 'error',
-        metadata: {
-          error: error instanceof Error ? error.message : 'Processing failed'
-        }
-      }
-    });
+    console.error('Erro no processamento:', error);
+    throw error;
   }
 }
+
+// Exporta função para verificar o status da fila
+export { getQueueStatus };
