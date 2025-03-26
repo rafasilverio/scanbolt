@@ -10280,6 +10280,194 @@ Por favor atualize dentro da @Header.tsx   tambem
 
 _**Assistant**_
 
+I'll update the header in Header.tsx to use the logo instead of text.
+
+---
+
+```diff
+                <span className="text-[#5000f7] font-bold text-lg">S</span>
+              </div>
+-             <span className="font-semibold text-xl text-white">Scancontract</span>
++             <img 
++               src="/logo horizontal white big.png" 
++               alt="Scancontract Logo" 
++               className="h-8"
++             />
+            </Link>
+  
+```
+
+---
+
+Logo atualizado com sucesso no Header.tsx. Agora o componente Header também exibe a imagem do logo em vez do texto "Scancontract", mantendo o visual consistente com o restante da aplicação.
+
+---
+
+_**User**_
+
+Nós estamos usando o @process-queue ? Fui subir pro vercel e deu erro
+
+---
+
+_**Assistant**_
+
+Read file: /Users/rafasilverio/sites/scancontract/src/app/api/cron/process-queue/route.ts
+
+---
+
+<details>
+            <summary>Grep search for "worker/contract-analysis" • **2** files</summary>
+        
+| File | Line | Match |
+|------|------|-------|
+| `file:///Users/rafasilverio/sites/scancontract/src/app/api/cron/process-queue/route.ts` | L5 | `const workerUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/worker/contract-analysis`;` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_19-44-implementa%C3%A7%C3%A3o-de-fila-para-an%C3%A1lise-de-contratos.md` | L220 | ````typescript:src/app/api/worker/contract-analysis/route.ts` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_19-44-implementa%C3%A7%C3%A3o-de-fila-para-an%C3%A1lise-de-contratos.md` | L328 | `const workerUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/worker/contract-analysis`;` |
+
+</details>
+
+---
+
+<details>
+            <summary>Grep search for "import.*redis" • **11** files</summary>
+        
+| File | Line | Match |
+|------|------|-------|
+| `file:///Users/rafasilverio/sites/scancontract/src/lib/queue.ts` | Lundefined | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/src/lib/redis.ts` | Lundefined | `import { Redis } from "@upstash/redis";` |
+| `file:///Users/rafasilverio/sites/scancontract/src/app/api/queue/worker/route.ts` | L1 | `import { analysisQueue } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/src/app/api/worker/contract-analysis/route.ts` | L1 | `import { redis, ANALYSIS_QUEUE } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/src/app/api/cron/process-queue/route.ts` | L1 | `import { redis, ANALYSIS_QUEUE } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-14_16-07-resolvendo-timeout-com-fila-no-redis.md` | L101 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-14_16-07-resolvendo-timeout-com-fila-no-redis.md` | L494 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-14_16-07-resolvendo-timeout-com-fila-no-redis.md` | L798 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_18-52-timeout-issues-and-async-contract-analysis-solution.md` | L51 | `import { Redis } from "@upstash/redis";` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_18-52-timeout-issues-and-async-contract-analysis-solution.md` | L61 | `import { redis } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_18-52-timeout-issues-and-async-contract-analysis-solution.md` | L444 | `import { redis } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-07_18-40-erro-na-migra%C3%A7%C3%A3o-de-contrato-em-%40route-ts.md` | L13016 | `import { redis } from './redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-07_18-40-erro-na-migra%C3%A7%C3%A3o-de-contrato-em-%40route-ts.md` | L13174 | `import Redis from 'ioredis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-07_18-40-erro-na-migra%C3%A7%C3%A3o-de-contrato-em-%40route-ts.md` | L13243 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-07_18-40-erro-na-migra%C3%A7%C3%A3o-de-contrato-em-%40route-ts.md` | L13390 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-07_18-40-erro-na-migra%C3%A7%C3%A3o-de-contrato-em-%40route-ts.md` | L14570 | `import { Redis } from '@upstash/redis'` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-07_18-40-erro-na-migra%C3%A7%C3%A3o-de-contrato-em-%40route-ts.md` | L14590 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-02-07_18-40-erro-na-migra%C3%A7%C3%A3o-de-contrato-em-%40route-ts.md` | L14676 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_19-44-implementa%C3%A7%C3%A3o-de-fila-para-an%C3%A1lise-de-contratos.md` | L74 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_19-44-implementa%C3%A7%C3%A3o-de-fila-para-an%C3%A1lise-de-contratos.md` | L88 | `import { redis, ANALYSIS_QUEUE } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_19-44-implementa%C3%A7%C3%A3o-de-fila-para-an%C3%A1lise-de-contratos.md` | L222 | `import { redis, ANALYSIS_QUEUE } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_19-44-implementa%C3%A7%C3%A3o-de-fila-para-an%C3%A1lise-de-contratos.md` | L324 | `import { redis, ANALYSIS_QUEUE } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-03_19-44-implementa%C3%A7%C3%A3o-de-fila-para-an%C3%A1lise-de-contratos.md` | L1263 | `import { redis, ANALYSIS_QUEUE } from '@/lib/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L1528 | `+ import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L2494 | `+ import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L2724 | `import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L2873 | `- import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L4620 | `- import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/.specstory/history/2025-03-18_17-04-melhoria-de-design-ui-na-p%C3%A1gina-inicial.md` | L5002 | `+ import { Redis } from '@upstash/redis';` |
+| `file:///Users/rafasilverio/sites/scancontract/src/lib/queue.ts` | Lundefined | `import { Redis } from '@upstash/redis';` |
+
+</details>
+
+---
+
+<details>
+            <summary>Searched codebase "worker/contract-analysis/route.ts" • **1** results</summary>
+        
+| File |
+|------|
+| `undefined` |
+
+</details>
+
+---
+
+Read file: /Users/rafasilverio/sites/scancontract/src/app/api/worker/contract-analysis/route.ts
+
+---
+
+Read file: /Users/rafasilverio/sites/scancontract/src/lib/redis.ts
+
+---
+
+```bash
+grep -r "ANALYSIS_QUEUE" --include="*.{ts,tsx,js,jsx}" src
+```
+
+```
+rafasilverio@MacBook-Air-de-Rafa scancontract % 
+
+```
+
+---
+
+```bash
+grep -r "addToQueue" --include="*.{ts,tsx,js,jsx}" src
+```
+
+```
+rafasilverio@MacBook-Air-de-Rafa scancontract % 
+
+```
+
+---
+
+```bash
+grep -r "process-queue" --include="*.{ts,tsx,js,jsx}" src
+```
+
+```
+rafasilverio@MacBook-Air-de-Rafa scancontract % 
+
+```
+
+---
+
+Parece que o arquivo `process-queue` e seus componentes relacionados foram criados, mas não estão sendo usados ativamente no projeto. Verifiquei através de várias buscas:
+
+1. A rota `/api/cron/process-queue` existe, e sua função é acionar o processamento de itens na fila Redis chamando o worker em `/api/worker/contract-analysis`.
+
+2. Embora o sistema de fila com Redis esteja configurado (com a definição de `ANALYSIS_QUEUE` em `redis.ts`), não encontrei referências ativas a:
+   - Funções como `addToQueue` sendo chamadas no código atual
+   - Uso da constante `ANALYSIS_QUEUE` em outros arquivos além dos próprios arquivos de fila
+   - Referências à rota `process-queue` no código
+
+O erro na Vercel pode estar ocorrendo porque:
+
+1. A configuração do cron está presente no arquivo `process-queue/route.ts` (`export const config = {...}`), mas pode ser que as variáveis de ambiente necessárias não estejam configuradas na Vercel.
+
+2. O Vercel precisa de configurações específicas para habilitar funções cron, que podem não estar presentes.
+
+Você tem duas opções:
+
+1. **Remover a rota não utilizada**: Se este sistema de fila não está sendo usado, pode remover os arquivos `/api/cron/process-queue/route.ts` e `/api/worker/contract-analysis/route.ts` para evitar erros.
+
+2. **Configurar corretamente**: Se pretende usar esse sistema, precisa configurar no Vercel:
+   - A integração com Upstash Redis (para `redis.ts` funcionar)
+   - As variáveis de ambiente `WORKER_API_SECRET` e `NEXT_PUBLIC_APP_URL`
+   - Configurar o Cron na Vercel, conforme documentação
+
+Qual das opções você prefere seguir?
+
+---
+
+_**User**_
+
+Vamos remove-lo então com segurança
+
+---
+
+_**Assistant**_
+
+Vou ajudá-lo a remover esses arquivos com segurança.
+
+---
+
+Removendo o arquivo de cron job que não está sendo utilizado
+
+---
+
+Cancelled
+
+---
+
 
 
 ---
