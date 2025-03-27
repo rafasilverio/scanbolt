@@ -1,80 +1,13 @@
+// [ARQUIVO STUB] - Esta funcionalidade foi movida para src/scripts/worker.js
+// Mantido apenas para evitar erros de build
+
 import { NextResponse } from 'next/server';
-import { analysisQueue } from '@/lib/redis';
-import { analyzeContract } from '@/lib/ai';
-import prisma from '@/lib/prisma';
 
 export const runtime = 'edge';
-export const preferredRegion = 'auto';
-export const maxDuration = 300; // 5 minutos
 
-export async function POST(request: Request) {
-  try {
-    // Processar próximo item da fila
-    const job = await analysisQueue.pop();
-    
-    if (!job) {
-      return NextResponse.json({ status: 'no jobs' });
-    }
-
-    const { contractId, text, textCoordinates } = job;
-
-    // Atualizar status para analyzing
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { 
-        status: 'analyzing',
-        metadata: {
-          startedAt: new Date()
-        }
-      }
-    });
-
-    // Executar análise
-    const analysisResult = await analyzeContract(
-      text, 
-      new Map(textCoordinates)
-    );
-
-    // Atualizar contrato com resultados
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        issues: JSON.stringify(analysisResult.issues),
-        suggestedClauses: JSON.stringify(analysisResult.suggestedClauses),
-        status: 'under_review',
-        metadata: {
-          completedAt: new Date()
-        }
-      }
-    });
-
-    return NextResponse.json({ 
-      status: 'success',
-      contractId,
-      message: 'Analysis completed successfully'
-    });
-
-  } catch (error) {
-    console.error('Worker error:', error);
-    
-    // Se temos o contractId, atualizar status de erro
-    if (error instanceof Error && 'contractId' in error) {
-      const { contractId } = error as any;
-      await prisma.contract.update({
-        where: { id: contractId },
-        data: {
-          status: 'error',
-          metadata: {
-            error: error instanceof Error ? error.message : 'Analysis failed',
-            failedAt: new Date()
-          }
-        }
-      });
-    }
-
-    return NextResponse.json(
-      { error: 'Worker failed' },
-      { status: 500 }
-    );
-  }
-}
+export async function POST() {
+  return NextResponse.json({
+    success: false,
+    message: 'Esta API foi descontinuada. O processamento agora é feito via worker.js Node.js separado.'
+  }, { status: 410 }); // 410 Gone
+} 

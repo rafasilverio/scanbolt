@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
       WHERE id = ${contract.id}::uuid
     `;
 
-    processContractInBackground(file, undefined, user.id, contract.id);
+    processContractInBackground(contract.id, file, user.id, false);
 
     return NextResponse.json({
       success: true,

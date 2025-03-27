@@ -307,8 +307,16 @@ async function runWorker() {
   }
 }
 
-// Iniciar o worker
-runWorker().catch(error => {
-  console.error('Fatal worker error:', error);
-  process.exit(1);
-}); 
+// Exportar a função processJob para permitir o reuso no cron job
+module.exports = {
+  processJob,
+  runWorker
+};
+
+// Iniciar o worker apenas se o arquivo for executado diretamente
+if (require.main === module) {
+  runWorker().catch(error => {
+    console.error('Fatal worker error:', error);
+    process.exit(1);
+  });
+} 

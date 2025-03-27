@@ -2,8 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
 import { analyzeContract } from '@/lib/ai';
 import PDFParser from 'pdf2json';
-// Importando da implementação correta em CommonJS
-const { addToQueue, getQueueStatus } = require('./queue.common');
+import { addToQueue, getQueueStatus } from './queue';
 import prisma from './prisma';
 
 const prismaClient = new PrismaClient();
@@ -153,7 +152,7 @@ export async function processContractInBackground(
       }
     } else {
       // Se precisar criar um novo contrato, primeiro busque o usuário
-      let validUserId: string | undefined = undefined;
+      let validUserId = null;
       
       if (userId) {
         const user = await prisma.user.findUnique({
@@ -202,8 +201,11 @@ export async function processContractInBackground(
     }
 
     // 3. Obter URL pública do arquivo
-    const fileBucket = 'contracts';
-    const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${fileBucket}/${filePath}`;
+    const { data } = supabase.storage
+      .from('contracts')
+      .getPublicUrl(filePath);
+    
+    const publicUrl = data.publicUrl;
 
     // 4. Atualizar contrato com a URL do arquivo
     await prisma.contract.update({
@@ -249,4 +251,4 @@ export async function processContractInBackground(
 }
 
 // Exporta função para verificar o status da fila
-// getQueueStatus já está sendo exportado via require/module.exports
+export { getQueueStatus };

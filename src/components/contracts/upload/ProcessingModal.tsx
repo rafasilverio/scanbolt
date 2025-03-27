@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, CheckCircle, Clock, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
-import { getQueueStatus } from '@/lib/queue';
+import { getQueueStatus } from '@/lib/queue.common.client';
 import { Progress } from '@/components/ui/progress';
 import { useRouter, usePathname } from 'next/navigation';
 

@@ -1,56 +1,13 @@
-import { verifySignature } from '@upstash/qstash/dist/nextjs'
-import { NextResponse } from 'next/server'
-import { analyzeContract } from '@/lib/ai'
-import prisma from '@/lib/prisma'
+// [ARQUIVO STUB] - Esta funcionalidade foi movida para src/scripts/worker.js
+// Mantido apenas para evitar erros de build
 
-// Proteger rota com verificação do QStash
-export const POST = verifySignature(async (req: any) => {
-  try {
-    const { contractId, text, textCoordinates } = await req.json()
+import { NextResponse } from 'next/server';
 
-    // Atualizar status para analyzing
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { status: 'analyzing' }
-    })
+export const runtime = 'edge';
 
-    // Executar análise
-    const analysisResult = await analyzeContract(
-      text, 
-      new Map(textCoordinates)
-    )
-
-    // Atualizar contrato com resultados
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        issues: analysisResult.issues,
-        suggestedClauses: analysisResult.suggestedClauses,
-        status: 'under_review'
-      }
-    })
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Queue processing error:', error)
-    
-    // Atualizar status para error
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { 
-        status: 'error',
-        metadata: {
-          error: error instanceof Error ? error.message : 'Analysis failed'
-        }
-      }
-    })
-
-    return NextResponse.json(
-      { error: 'Processing failed' },
-      { status: 500 }
-    )
-  }
-})
-
-// Configurar para Edge Runtime
-export const runtime = 'edge'
+export async function POST() {
+  return NextResponse.json({
+    success: false,
+    message: 'Esta API foi descontinuada. O processamento agora é feito via worker.js Node.js separado.'
+  }, { status: 410 }); // 410 Gone
+} 

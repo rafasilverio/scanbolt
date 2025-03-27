@@ -92,8 +92,7 @@ export async function POST(
       contract.id,
       file,
       'anonymous',
-      true,
-      params.tempId
+      true
     );
 
     // 3. Retornar resposta imediata

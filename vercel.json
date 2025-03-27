@@ -3,5 +3,13 @@
     "app/api/**/*": {
       "memory": 1024
     }
-  }
+  },
+  "buildCommand": "npm run build",
+  "ignoreCommand": "echo 'ignoring worker.js - should be run separately'",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "installCommand": "npm install"
 } 

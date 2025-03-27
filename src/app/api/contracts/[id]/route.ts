@@ -91,7 +91,7 @@ export async function GET(
       );
     }
 
-    if (contract.user.email !== session.user.email) {
+    if (!contract.user || contract.user.email !== session.user.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -247,7 +247,10 @@ export async function PATCH(
       where: { id: params.id },
       data: {
         status: body.status,
-        highlights: body.highlights,
+        metadata: body.highlights ? JSON.stringify({
+          highlights: body.highlights,
+          updatedAt: new Date().toISOString()
+        }) : undefined,
         updatedAt: new Date(),
       },
     });

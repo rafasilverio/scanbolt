@@ -1,15 +1,7 @@
-import { Redis } from '@upstash/redis';
+// [ARQUIVO STUB] - A implementação atual está em src/lib/queue.common.js
+// Este arquivo é mantido apenas para compatibilidade com importações existentes
 
-// Inicializar cliente Redis
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
-
-// Constante para o nome da fila
-const QUEUE_KEY = 'contract-processing-queue';
-
-// Tipo para os jobs na fila
+// Tipo para os jobs na fila (mantido por compatibilidade)
 export type ContractJob = {
   contractId: string;
   fileData: {
@@ -24,86 +16,28 @@ export type ContractJob = {
   createdAt: number;
 };
 
-// Função para adicionar um job à fila
-export async function addToQueue(job: Omit<ContractJob, 'createdAt'>): Promise<string> {
-  const jobWithTimestamp: ContractJob = {
-    ...job,
-    createdAt: Date.now()
-  };
-  
-  // Adiciona o job ao final da lista no Redis
-  const jobId = await redis.rpush(QUEUE_KEY, JSON.stringify(jobWithTimestamp));
-  
-  console.log(`Job added to queue with ID: ${jobId}, contract: ${job.contractId}`);
-  
-  return jobId.toString();
-}
-
-// Função para obter o próximo job da fila (FIFO)
+// Função stub - a implementação atual está em queue.common.js
 export async function getNextJob(): Promise<ContractJob | null> {
-  // Obtém e remove o primeiro elemento da lista
-  const jobData = await redis.lpop(QUEUE_KEY);
-  
-  if (!jobData) {
-    return null;
-  }
-  
-  try {
-    const job = JSON.parse(jobData as string) as ContractJob;
-    return job;
-  } catch (error) {
-    console.error('Error parsing job data:', error);
-    return null;
-  }
+  console.warn('DEPRECATED: Esta função foi movida para src/lib/queue.common.js');
+  return null;
 }
 
-// Função para obter o status da fila
+// Função stub - a implementação atual está em queue.common.js
+export async function addToQueue(job: Omit<ContractJob, 'createdAt'>): Promise<string> {
+  console.warn('DEPRECATED: Esta função foi movida para src/lib/queue.common.js');
+  return '';
+}
+
+// Função stub - a implementação atual está em queue.common.js
 export async function getQueueStatus(): Promise<{ 
   length: number; 
   oldestJob: number | null;
   newestJob: number | null;
 }> {
-  // Obtém o tamanho atual da fila
-  const queueLength = await redis.llen(QUEUE_KEY);
-  
-  // Se a fila estiver vazia, retorna valores padrão
-  if (queueLength === 0) {
-    return {
-      length: 0,
-      oldestJob: null,
-      newestJob: null
-    };
-  }
-  
-  // Pega o primeiro job (mais antigo) sem removê-lo
-  const oldest = await redis.lindex(QUEUE_KEY, 0);
-  let oldestTimestamp: number | null = null;
-  
-  if (oldest) {
-    try {
-      const job = JSON.parse(oldest as string) as ContractJob;
-      oldestTimestamp = job.createdAt;
-    } catch (error) {
-      console.error('Error parsing oldest job:', error);
-    }
-  }
-  
-  // Pega o último job (mais recente) sem removê-lo
-  const newest = await redis.lindex(QUEUE_KEY, -1);
-  let newestTimestamp: number | null = null;
-  
-  if (newest) {
-    try {
-      const job = JSON.parse(newest as string) as ContractJob;
-      newestTimestamp = job.createdAt;
-    } catch (error) {
-      console.error('Error parsing newest job:', error);
-    }
-  }
-  
+  console.warn('DEPRECATED: Esta função foi movida para src/lib/queue.common.js');
   return {
-    length: queueLength,
-    oldestJob: oldestTimestamp,
-    newestJob: newestTimestamp
+    length: 0,
+    oldestJob: null,
+    newestJob: null
   };
 } 
