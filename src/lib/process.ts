@@ -140,11 +140,9 @@ export async function processContractInBackground(
   existingContractId?: string
 ) {
   try {
-    // 1. Criar ou usar contrato existente no banco de dados
     let contract;
     
     if (existingContractId) {
-      // Usar contrato existente
       contract = await prisma.contract.findUnique({
         where: { id: existingContractId }
       });
@@ -152,16 +150,28 @@ export async function processContractInBackground(
       if (!contract) {
         throw new Error(`Contrato com ID ${existingContractId} não encontrado`);
       }
-      
-      console.log(`Usando contrato existente: ${existingContractId}`);
     } else {
-      // Criar novo contrato
+      // Se precisar criar um novo contrato, primeiro busque o usuário
+      let validUserId = null;
+      
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId }
+        });
+        
+        if (user) {
+          validUserId = user.id; // Usar o ID do usuário recuperado do banco
+        } else {
+          console.warn('User not found, creating contract without user');
+        }
+      }
+      
       contract = await prisma.contract.create({
         data: {
           title: file.name,
           status: 'under_review',
           fileType: file.type,
-          content: '', // Será preenchido pelo worker
+          content: '',
           issues: [],
           suggestedClauses: [],
           metadata: {
@@ -169,13 +179,11 @@ export async function processContractInBackground(
             updatedAt: new Date().toISOString()
           },
           numPages: 0,
-          fileUrl: '', // Será atualizado após o upload
-          fileName: '', // Será atualizado após o upload
-          userId: userId // Usar o userId fornecido
+          fileUrl: '',
+          fileName: '',
+          userId: validUserId
         },
       });
-      
-      console.log(`Criado novo contrato: ${contract.id}`);
     }
 
     // 2. Upload do arquivo para o Supabase Storage

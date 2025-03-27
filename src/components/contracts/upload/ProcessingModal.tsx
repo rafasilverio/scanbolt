@@ -32,6 +32,7 @@ export default function ProcessingModal({
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const [consecutiveCompletionChecks, setConsecutiveCompletionChecks] = useState(0);
+  const [storedContractId, setStoredContractId] = useState<string | null>(null);
 
   const steps = [
     "Scanning document",
@@ -164,6 +165,11 @@ export default function ProcessingModal({
     }
   }, [uploadProgress, queueStatus, currentStep]);
 
+  // Inicializar o storedContractId quando o componente montar no cliente
+  useEffect(() => {
+    setStoredContractId(localStorage.getItem("processingContractId"));
+  }, []);
+
   return (
     <Dialog 
       open={open} 
@@ -281,10 +287,10 @@ export default function ProcessingModal({
             </div>
             
             {/* Rodapé com ID do contrato */}
-            {(contractId || localStorage.getItem("processingContractId")) && (
+            {(contractId || storedContractId) && (
               <div className="mt-6 pt-3 text-center">
                 <p className="text-xs text-white/40">
-                  Contract ID: {contractId || localStorage.getItem("processingContractId")}
+                  Contract ID: {contractId || storedContractId}
                 </p>
               </div>
             )}

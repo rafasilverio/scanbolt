@@ -14,6 +14,7 @@ import {
 import PDFParser from 'pdf2json';
 import { analyzeContract } from '@/lib/ai';
 import { processContractInBackground } from '@/lib/process';
+import { v4 as uuidv4 } from 'uuid';
 
 export const maxDuration = 60; // Aumentado para 5 minutos
 export const dynamic = 'force-dynamic';
@@ -166,13 +167,25 @@ function sanitizeFileName(fileName: string): string {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const userIdFromSession = session?.user?.id;
 
-    if (!userId) {
+    if (!userIdFromSession) {
       return NextResponse.json({ 
         success: false, 
         error: 'User not authenticated' 
       }, { status: 401 });
+    }
+
+    // Buscar o usuário primeiro para obter o ID no formato correto
+    const user = await prisma.user.findUnique({
+      where: { id: userIdFromSession }
+    });
+
+    if (!user) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User not found' 
+      }, { status: 404 });
     }
 
     const formData = await req.formData();
@@ -182,30 +195,43 @@ export async function POST(req: NextRequest) {
       throw new Error('No file provided');
     }
 
-    // 1. Criar contrato inicial com status "analyzing"
+    // Usar user.id que está no formato correto
+    // Primeiro, criar contrato com campos básicos
     const contract = await prisma.contract.create({
       data: {
         title: file.name,
-        fileUrl: '', // será atualizado após upload
+        fileUrl: '',
         fileName: file.name,
         status: "under_review",
         fileType: file.type,
-        content: '',  // será atualizado após extração
-        issues: [],   // será atualizado após análise
-        suggestedClauses: [], // será atualizado após análise
-        metadata: {
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        userId: userId,
-        numPages: 0   // será atualizado após extração
+        content: '',
+        userId: user.id,
+        numPages: 0,
+        issues: [],
+        suggestedClauses: [],
+        metadata: {}
       }
     });
+    
+    // Depois, atualizar campos JSON usando SQL direto
+    const emptyIssues = JSON.stringify([]);
+    const emptySuggestedClauses = JSON.stringify([]);
+    const initialMetadata = JSON.stringify({
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    
+    await prisma.$executeRaw`
+      UPDATE "Contract" 
+      SET 
+        "issues" = ${emptyIssues}::jsonb,
+        "suggestedClauses" = ${emptySuggestedClauses}::jsonb,
+        "metadata" = ${initialMetadata}::jsonb
+      WHERE id = ${contract.id}::uuid
+    `;
 
-    // 2. Iniciar processamento em background - usar o ID do contrato criado
-    processContractInBackground(file, undefined, userId, contract.id);
+    processContractInBackground(file, undefined, user.id, contract.id);
 
-    // 3. Retornar resposta imediata
     return NextResponse.json({
       success: true,
       contract: {
@@ -213,12 +239,11 @@ export async function POST(req: NextRequest) {
         status: "under_review"
       }
     });
-
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to process contract' 
+      error: error instanceof Error ? error.message : 'Failed to process contract' 
     }, { status: 500 });
   }
 }

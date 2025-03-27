@@ -109,14 +109,20 @@ ${JSON.stringify(textLines, null, 2)}`
 
 export async function updateContractStatus(contractId: string, status: string, issues: ContractIssue[] = [], suggestedClauses: SuggestedClause[] = []) {
   try {
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        status,
-        issues: JSON.stringify(issues),
-        suggestedClauses: JSON.stringify(suggestedClauses)
-      }
-    });
+    // Converter para JSON strings
+    const issuesJson = JSON.stringify(issues);
+    const suggestedClausesJson = JSON.stringify(suggestedClauses);
+    
+    // Atualizar todos os campos com SQL direto
+    await prisma.$executeRaw`
+      UPDATE "Contract" 
+      SET 
+        "status" = ${status},
+        "issues" = ${issuesJson}::jsonb,
+        "suggestedClauses" = ${suggestedClausesJson}::jsonb,
+        "updatedAt" = ${new Date()}
+      WHERE id = ${contractId}::uuid
+    `;
   } catch (error) {
     console.error('Error updating contract status:', error);
     throw error;

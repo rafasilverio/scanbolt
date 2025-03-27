@@ -4,6 +4,7 @@ const PDFParser = require('pdf2json');
 const { getNextJob } = require('../lib/queue.common');
 const { analyzeContract } = require('../lib/ai.common');
 const dotenv = require('dotenv');
+const crypto = require('crypto');
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -105,6 +106,7 @@ async function extractTextFromPDF(buffer) {
 async function processJob(job) {
   try {
     console.log(`Processing job for contract: ${job.contractId}`);
+    console.log(`Contract ID type: ${typeof job.contractId}, value: ${job.contractId}`);
     console.log('Job data:', JSON.stringify({
       contractId: job.contractId,
       fileSize: job.fileData?.size,
@@ -211,87 +213,66 @@ async function processJob(job) {
       console.log('Public URL:', fileUrl);
     }
     
-    // 4. Primeira atualização: URL do arquivo e conteúdo
-    await prisma.contract.update({
-      where: { id: job.contractId },
-      data: {
-        fileUrl: fileUrl,
-        fileName: fileName,
-        content: decodedText,
-        numPages: pageCount
-      }
+    // Processar issues e suggestedClauses
+    const issuesData = issues.map(issue => ({
+      ...issue,
+      id: issue.id || crypto.randomUUID()
+    }));
+
+    const suggestedClausesData = suggestedClauses.map(clause => ({
+      ...clause,
+      id: clause.id || crypto.randomUUID()
+    }));
+
+    // Converter para JSON strings
+    const issuesJson = JSON.stringify(issuesData);
+    const suggestedClausesJson = JSON.stringify(suggestedClausesData);
+    const metadataJson = JSON.stringify({
+      pageCount,
+      updatedAt: new Date().toISOString(),
+      analyzedAt: new Date().toISOString(),
+      processingTime: Date.now() - (job.createdAt || Date.now())
     });
-    
-    // 5. Garantir que issues e suggestedClauses estejam no formato correto para o Prisma
-    console.log(`Processing ${issues.length} issues and ${suggestedClauses.length} clauses`);
-    
-    // Usar um objeto nativo do JavaScript para cada issue e clause
-    const issuesData = issues || [];
-    const suggestedClausesData = suggestedClauses || [];
-    
-    console.log('Sample issue:', JSON.stringify(issuesData[0] || {}));
-    console.log('Sample clause:', JSON.stringify(suggestedClausesData[0] || {}));
-    
-    // 6. Atualização final com resultados da análise
-    // Primeiro, vamos fazer um log detalhado do que está sendo enviado para o banco de dados
-    console.log('Updating contract with the following data:');
-    console.log('- Contract ID:', job.contractId);
-    console.log('- Status:', 'under_review');
-    console.log('- Issues count:', issuesData.length);
-    console.log('- Suggested clauses count:', suggestedClausesData.length);
-    
-    try {
-      // 6.1 Atualizar conteúdo, metadata e status
-      const updatedAll = await prisma.contract.update({
-        where: { id: job.contractId },
-        data: {
-          fileUrl: fileUrl,
-          fileName: fileName,
-          content: decodedText,
-          numPages: pageCount,
-          // Atualizar arrays de uma vez, não um a um
-          issues: issuesData,
-          suggestedClauses: suggestedClausesData,
-          status: 'under_review',
-          metadata: {
-            pageCount: pageCount,
-            updatedAt: new Date().toISOString(),
-            analyzedAt: new Date().toISOString(),
-            processingTime: Date.now() - (job.createdAt || Date.now())
-          }
-        }
-      });
-      
-      console.log('Updated all fields:', {
-        fileUrl: updatedAll.fileUrl?.substring(0, 30) + '...',
-        fileName: updatedAll.fileName,
-        contentLength: updatedAll.content?.length || 0,
-        numPages: updatedAll.numPages,
-        issuesCount: Array.isArray(updatedAll.issues) ? updatedAll.issues.length : 'not an array',
-        suggestedClausesCount: Array.isArray(updatedAll.suggestedClauses) ? updatedAll.suggestedClauses.length : 'not an array'
-      });
-    } catch (updateError) {
-      console.error('Error updating contract:', updateError);
-      throw updateError;
-    }
-    
+
+    // Atualizar todos os campos com SQL direto
+    await prisma.$executeRaw`
+      UPDATE "Contract" 
+      SET 
+        "fileUrl" = ${fileUrl},
+        "fileName" = ${fileName},
+        "content" = ${decodedText},
+        "numPages" = ${pageCount},
+        "status" = 'under_review',
+        "issues" = ${issuesJson}::jsonb,
+        "suggestedClauses" = ${suggestedClausesJson}::jsonb,
+        "metadata" = ${metadataJson}::jsonb,
+        "updatedAt" = ${new Date()}
+      WHERE id = ${job.contractId}::uuid
+    `;
+
+    console.log(`Contract ${job.contractId} updated successfully with analysis results`);
     console.log(`Job completed for contract: ${job.contractId}`);
     
   } catch (error) {
     console.error('Error processing job:', error);
     
-    // Atualizar contrato com status como under_review em caso de erro
+    // Atualizar contrato com status de erro usando SQL direto
     try {
-      await prisma.contract.update({
-        where: { id: job.contractId },
-        data: { 
-          status: 'under_review',
-          metadata: {
-            error: error.message,
-            errorTimestamp: new Date().toISOString()
-          }
-        }
+      const errorMetadata = JSON.stringify({
+        error: error.message,
+        errorTimestamp: new Date().toISOString()
       });
+
+      await prisma.$executeRaw`
+        UPDATE "Contract" 
+        SET 
+          "status" = 'under_review',
+          "metadata" = ${errorMetadata}::jsonb,
+          "updatedAt" = ${new Date()}
+        WHERE id = ${job.contractId}::uuid
+      `;
+      
+      console.log(`Contract ${job.contractId} marked with error status`);
     } catch (statusError) {
       console.error('Failed to update contract status:', statusError);
     }

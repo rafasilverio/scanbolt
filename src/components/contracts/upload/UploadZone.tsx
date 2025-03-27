@@ -33,10 +33,14 @@ export function UploadZone() {
       const response = await fetch('/api/contracts/upload', {
         method: 'POST',
         body: formData,
+        headers: {
+          'Accept': 'application/json',
+        }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process contract');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process contract');
       }
 
       const data = await response.json();
@@ -46,8 +50,6 @@ export function UploadZone() {
         setUploadProgress(100);
         setUploadStep('Arquivo enviado com sucesso! Redirecionando...');
         
-        // Adicionar atraso de 3 segundos antes de redirecionar
-        // Isso dará tempo para o usuário ver o modal de processamento
         setTimeout(() => {
           router.push(`/contracts/${data.contract.id}`);
         }, 3000);
@@ -56,14 +58,12 @@ export function UploadZone() {
       console.error('Erro no upload:', error);
       toast({
         title: 'Erro no upload',
-        description: 'Não foi possível fazer o upload do arquivo. Tente novamente.',
+        description: error instanceof Error ? error.message : 'Não foi possível fazer o upload do arquivo. Tente novamente.',
         variant: 'destructive',
       });
       setShowProcessingModal(false);
     } finally {
       setIsUploading(false);
-      // Não resetamos o progresso nem fechamos o modal aqui,
-      // ele continuará visível durante o redirecionamento
     }
   }, [toast, router]);
 

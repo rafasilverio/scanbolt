@@ -25,26 +25,24 @@ model User {
 }
 
 model Contract {
-  id                String   @id @default(cuid())
+  id                String   @id @default(uuid()) @db.Uuid  // Alterado para uuid
   title             String
   fileUrl           String
   fileName          String
   fileType          String
   content           String   @db.Text
-  issues            Json[]
-  suggestedClauses  Json[]
-  metadata          Json
+  issues            Json    @default("[]")
+  suggestedClauses  Json    @default("[]")
+  metadata          Json    @default("{}")
   status            String   @default("pending")
   tempId            String?  @unique
   numPages          Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  userId            String?
+  userId            String   @db.Uuid
   user              User?    @relation(fields: [userId], references: [id])
-
+  
   @@index([userId])
-  @@index([status])
-  @@index([tempId])
 }
 
 model preview_cache {
