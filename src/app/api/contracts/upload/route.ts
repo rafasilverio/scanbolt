@@ -230,7 +230,14 @@ export async function POST(req: NextRequest) {
       WHERE id = ${contract.id}::uuid
     `;
 
-    processContractInBackground(contract.id, file, user.id, false);
+    try {
+      console.log('Iniciando processamento em background para contrato:', contract.id);
+      await processContractInBackground(contract.id, file, user.id, false);
+      console.log('Processamento em background iniciado com sucesso');
+    } catch (error) {
+      console.error('Erro ao iniciar processamento em background:', error);
+      // Não lançar o erro para manter a API funcionando
+    }
 
     return NextResponse.json({
       success: true,
