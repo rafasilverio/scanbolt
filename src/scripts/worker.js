@@ -16,6 +16,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+let checkInterval = 5000; // Inicial: 5 segundos
+const MAX_INTERVAL = 60000; // Máximo: 1 minuto
+const MIN_INTERVAL = 5000; // Mínimo: 5 segundos
+let emptyQueueCount = 0;
+
 // Função para extrair texto do PDF
 async function extractTextFromPDF(buffer) {
   const pdfParser = new PDFParser();
@@ -285,7 +290,6 @@ async function processJob(job) {
 async function runWorker() {
   console.log('Starting contract processing worker...');
   
-  // Loop infinito para processar jobs
   while (true) {
     try {
       // Obter próximo job da fila
@@ -293,15 +297,27 @@ async function runWorker() {
       
       if (job) {
         console.log('Processing new job:', job.contractId);
+        emptyQueueCount = 0; // Resetar contador de fila vazia
+        checkInterval = MIN_INTERVAL; // Voltar para intervalo mínimo
+        
         await processJob(job);
       } else {
-        // Esperar 5 segundos antes de verificar novamente se não houver jobs
-        console.log('No jobs to process, waiting 5 seconds...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Aumentar contagem de filas vazias
+        emptyQueueCount++;
+        
+        // Ajustar intervalo baseado na inatividade
+        if (emptyQueueCount > 5) {
+          // Após 5 verificações vazias, aumentar o intervalo
+          checkInterval = Math.min(checkInterval * 2, MAX_INTERVAL);
+        }
+        
+        console.log(`No jobs to process, waiting ${checkInterval/1000} seconds... (Count: ${emptyQueueCount})`);
+        
+        // Aguardar antes de verificar novamente
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
       }
     } catch (error) {
       console.error('Worker error:', error);
-      // Esperar antes de tentar novamente após um erro
       await new Promise(resolve => setTimeout(resolve, 10000));
     }
   }
