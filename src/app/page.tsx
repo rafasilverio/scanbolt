@@ -171,7 +171,7 @@ export default function Home() {
               </div>
             )}
             
-            <div className="flex flex-col sm:flex-row items-center justify-center mt-12 bg-white/60 backdrop-blur-sm py-4 px-6 rounded-xl shadow-sm border border-slate-100 max-w-xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-center mt-12 bg-white/60 backdrop-blur-sm py-4 px-6 rounded-xl shadow-sm border border-slate-100 max-w-2xl mx-auto">
               <div className="flex -space-x-3 sm:mr-6 mb-4 sm:mb-0">
                 <Image src="/testimonial-1.jpeg" alt="" width={44} height={44} className="rounded-full border-2 border-white" />
                 <Image src="/testimonial-2.jpeg" alt="" width={44} height={44} className="rounded-full border-2 border-white" />
