@@ -73,7 +73,7 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="font-bold text-xl text-primary flex items-center">
               <img 
-                src="/logo horizontal purple big.png" 
+                src="/logo horizontal - black.png" 
                 alt="ScanContract Logo" 
                 className="h-8" 
               />
@@ -170,6 +170,27 @@ export default function Home() {
                 <PreviewUploader />
               </div>
             )}
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center mt-12 bg-white/60 backdrop-blur-sm py-4 px-6 rounded-xl shadow-sm border border-slate-100 max-w-xl mx-auto">
+              <div className="flex -space-x-3 sm:mr-6 mb-4 sm:mb-0">
+                <Image src="/testimonial-1.jpeg" alt="" width={44} height={44} className="rounded-full border-2 border-white" />
+                <Image src="/testimonial-2.jpeg" alt="" width={44} height={44} className="rounded-full border-2 border-white" />
+                <Image src="/testimonial-7.jpeg" alt="" width={44} height={44} className="rounded-full border-2 border-white" />
+                <Image src="/testimonial-4.jpeg" alt="" width={44} height={44} className="rounded-full border-2 border-white hidden sm:block" />
+                <Image src="/testimonial-5.jpeg" alt="" width={44} height={44} className="rounded-full border-2 border-white hidden sm:block" />
+              </div>
+              <div className="text-center sm:text-left">
+                <p className="text-slate-800 text-sm font-medium mb-1">
+                  <span className="text-[#5000f7] font-bold">10,000+</span> everyday people, lawyers & businesses trust our AI analysis
+                </p>
+                <div className="flex items-center justify-center sm:justify-start">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  ))}
+                  <span className="text-xs text-slate-600 ml-1">4.9/5 from 800+ reviews</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -381,25 +402,25 @@ export default function Home() {
             <div>
               <h4 className="font-semibold text-white mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/features" className="hover:text-white transition-colors">Features</Link></li>
-                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/security" className="hover:text-white transition-colors">Security</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Features</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Security</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
-                <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">About</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Careers</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Resources</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
-                <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
-                <li><Link href="/guides" className="hover:text-white transition-colors">Guides</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Blog</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Help Center</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Guides</Link></li>
               </ul>
             </div>
             <div>
@@ -407,7 +428,6 @@ export default function Home() {
               <ul className="space-y-2 text-sm">
                 <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
                 <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-                <li><Link href="/compliance" className="hover:text-white transition-colors">Compliance</Link></li>
               </ul>
             </div>
           </div>

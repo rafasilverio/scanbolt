@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,7 +40,53 @@ export function PreviewRegisterDialog({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [contractId, setContractId] = useState<string | null>(null);
   const router = useRouter();
+
+  // Verificar periodicamente o status do contrato se estiver em análise
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (open && migrationStatus === 'analyzing' && contractId) {
+      // Inicia o polling após iniciar a migração
+      const checkContractStatus = async () => {
+        try {
+          const response = await fetch(`/api/contracts/${contractId}/status`);
+          if (!response.ok) return;
+          
+          const data = await response.json();
+          
+          // Atualizar o progresso com base no status
+          if (data.status === 'under_review' || data.isAnalysisComplete) {
+            setProcessingProgress(90);
+            
+            if (data.isAnalysisComplete) {
+              setMigrationStatus('completed');
+              router.push(`/contracts/${contractId}/revision`);
+              clearInterval(interval);
+            }
+          } else if (data.status === 'queued') {
+            setProcessingProgress(30);
+          } else if (data.status === 'processing') {
+            setProcessingProgress(60);
+          }
+        } catch (error) {
+          console.error('Error checking contract status:', error);
+        }
+      };
+      
+      // Verificar imediatamente
+      checkContractStatus();
+      
+      // E então a cada 2 segundos
+      interval = setInterval(checkContractStatus, 2000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [open, contractId, migrationStatus, router]);
 
   const handleGoogleSignIn = () => {
     signIn('google', { callbackUrl: `/api/preview/migrate?tempId=${tempId}` });
@@ -64,6 +110,7 @@ export function PreviewRegisterDialog({
   const handleMigration = async () => {
     try {
       setMigrationStatus('migrating');
+      setProcessingProgress(10);
       
       const response = await fetch('/api/preview/migrate', {
         method: 'POST',
@@ -73,39 +120,19 @@ export function PreviewRegisterDialog({
 
       if (!response.ok) throw new Error('Migration failed');
       
-      const { contractId } = await response.json();
+      const data = await response.json();
+      setContractId(data.contractId);
       
       // Aguardar o processamento do contrato
       setMigrationStatus('analyzing');
+      setProcessingProgress(30);
       
-      // Polling para verificar o status do contrato
-      const maxAttempts = 30; // 30 segundos
-      let attempts = 0;
-      
-      while (attempts < maxAttempts) {
-        const isComplete = await checkContractStatus(contractId);
-        
-        if (isComplete) {
-          setMigrationStatus('completed');
-          router.push(`/contracts/${contractId}`);
-          return;
-        }
-        
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
-      }
-      
-      // Se chegou aqui, timeout
-      throw new Error('Contract processing timeout');
+      // O resto do polling é gerenciado pelo useEffect acima
       
     } catch (error) {
       console.error('Migration error:', error);
       toast.error('Failed to process contract');
-    } finally {
-      if (migrationStatus !== 'completed') {
-        setMigrationStatus('idle');
-      }
-      onOpenChange(false);
+      setMigrationStatus('idle');
     }
   };
 
@@ -151,7 +178,6 @@ export function PreviewRegisterDialog({
     } catch (error) {
       console.log('Auth error:', error);
       setError(error instanceof Error ? error.message : 'Authentication failed');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -182,12 +208,20 @@ export function PreviewRegisterDialog({
                 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-white">Identifying key clauses</span>
-                  <CheckIcon className="w-4 h-4 text-green-300/80" />
+                  {processingProgress > 50 ? (
+                    <CheckIcon className="w-4 h-4 text-green-300/80" />
+                  ) : (
+                    <Loader className="w-4 h-4 animate-spin text-blue-300/80" />
+                  )}
                 </div>
                 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-white">Running legal analysis</span>
-                  <Loader className="w-4 h-4 animate-spin text-blue-300/80" />
+                  {processingProgress > 80 ? (
+                    <CheckIcon className="w-4 h-4 text-green-300/80" />
+                  ) : (
+                    <Loader className="w-4 h-4 animate-spin text-blue-300/80" />
+                  )}
                 </div>
               </div>
 
@@ -198,7 +232,7 @@ export function PreviewRegisterDialog({
 
               <div>
                 <Progress 
-                  value={75} 
+                  value={processingProgress} 
                   className="h-1.5 bg-white/5"
                 />
                 <p className="text-white/40 text-xs mt-2">Almost there...</p>

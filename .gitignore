@@ -38,3 +38,8 @@ ecosystem.config.js
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#chat-history
+/.specstory
+.specstory
+.cursorindexingignore

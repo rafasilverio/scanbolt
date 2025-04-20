@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import PDFParser from 'pdf2json';
 import { DEFAULT_PREVIEW_STATS } from '@/types/preview';
 import { PrismaClient } from '@prisma/client';
-import { processContractInBackground } from '@/lib/process';
 
 const prisma = new PrismaClient();
 
@@ -67,35 +66,34 @@ export async function POST(
       throw new Error('No file provided');
     }
 
-    // 1. Criar contrato inicial com status "queued"
-    const contract = await prisma.contract.create({
-      data: {
-        title: file.name,
-        fileUrl: '', // será atualizado após upload
-        fileName: file.name,
-        status: "queued",
-        fileType: file.type,
-        content: '',  // será atualizado após extração
-        issues: [],   // será atualizado após análise
-        suggestedClauses: [], // será atualizado após análise
-        metadata: {
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        tempId: params.tempId,
-        numPages: 0   // será atualizado após extração
-      }
-    });
+    // Extrair o conteúdo do arquivo para armazenamento no cache
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer).toString('base64');
 
-    // 2. Iniciar processamento em background
-    await processContractInBackground(
-      contract.id,
-      file,
-      'anonymous',
-      true
-    );
+    // Armazenar dados no preview_cache para processamento posterior
+    const { data, error } = await supabaseAdmin
+      .from('preview_cache')
+      .insert({
+        id: params.tempId,
+        data: {
+          fileName: file.name,
+          fileType: file.type,
+          content: buffer,
+          metadata: {
+            fileSize: file.size,
+            createdAt: new Date().toISOString()
+          }
+        }
+      })
+      .select()
+      .single();
 
-    // 3. Retornar resposta imediata
+    if (error) {
+      console.error('Preview cache storage error:', error);
+      throw new Error('Failed to store preview data');
+    }
+
+    // Retornar resposta imediata
     return NextResponse.json({
       success: true,
       tempId: params.tempId
@@ -107,6 +105,8 @@ export async function POST(
       success: false, 
       error: 'Failed to process contract' 
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 

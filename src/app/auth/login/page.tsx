@@ -69,11 +69,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white order-2 lg:order-1">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
+            <div className="flex justify-center mb-6">
+              <Image src="/logo horizontal purple big.png" alt="ScanContract" width={240} height={60} />
+            </div>
             <h2 className="text-4xl font-bold text-gray-900 tracking-tight">Welcome back</h2>
             <p className="mt-3 text-lg text-gray-600">Sign in to your account to continue</p>
           </div>
@@ -129,7 +132,7 @@ export default function LoginPage() {
 
             <Button 
               type="submit" 
-              className="w-full h-12 text-base bg-[#5000f7] hover:bg-[#4000d7]"
+              className="w-full h-12 text-base bg-[#5000f7] hover:bg-[#4000d7] text-white"
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign in"}
@@ -146,22 +149,22 @@ export default function LoginPage() {
       </div>
 
       {/* Right side - Testimonials */}
-      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-[#5000f7] to-[#4000d7] text-white p-8 flex-col justify-center">
-        <div className="max-w-lg mx-auto space-y-12">
+      <div className="flex w-full lg:w-1/2 bg-gradient-to-br from-[#5000f7] to-[#4000d7] text-white p-8 flex-col justify-center order-1 lg:order-2">
+        <div className="max-w-lg mx-auto space-y-8">
           <div>
-            <h3 className="text-3xl font-bold mb-8">Trusted by legal professionals worldwide</h3>
+            <h3 className="text-2xl lg:text-3xl font-bold mb-6">Trusted by legal professionals worldwide</h3>
             
-            <div className="space-y-8">
-              <blockquote className="space-y-4">
-                <p className="text-lg">&quot;This platform has revolutionized our contract review process. We&apos;ve reduced review time by 75% while improving accuracy.&quot;</p>
+            <div className="space-y-6">
+              <blockquote className="space-y-3">
+                <p className="text-base lg:text-lg">&quot;This platform has revolutionized our contract review process. We&apos;ve reduced review time by 75% while improving accuracy.&quot;</p>
                 <footer className="text-sm">
                   <cite className="font-medium">Sarah Chen</cite>
                   <p>Legal Director, TechCorp Inc.</p>
                 </footer>
               </blockquote>
 
-              <blockquote className="space-y-4">
-                <p className="text-lg">&quot;The AI-powered analysis catches issues that could easily be missed. It&apos;s like having an extra senior partner reviewing every document.&quot;</p>
+              <blockquote className="space-y-3 hidden lg:block">
+                <p className="text-base lg:text-lg">&quot;The AI-powered analysis catches issues that could easily be missed. It&apos;s like having an extra senior partner reviewing every document.&quot;</p>
                 <footer className="text-sm">
                   <cite className="font-medium">Michael Rodriguez</cite>
                   <p>Managing Partner, Rodriguez & Associates</p>
@@ -170,13 +173,17 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 lg:gap-6">
             <div className="flex -space-x-4">
-              <Image src="/testimonial-1.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
-              <Image src="/testimonial-2.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
-              <Image src="/testimonial-3.jpg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
+              <Image src="/testimonial-1.jpeg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
+              <Image src="/testimonial-2.jpeg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
+              <Image src="/testimonial-3.jpeg" alt="" width={48} height={48} className="rounded-full border-2 border-white" />
+              <Image src="/testimonial-4.jpeg" alt="" width={48} height={48} className="rounded-full border-2 border-white hidden sm:block" />
+              <Image src="/testimonial-5.jpeg" alt="" width={48} height={48} className="rounded-full border-2 border-white hidden sm:block" />
+              <Image src="/testimonial-6.jpeg" alt="" width={48} height={48} className="rounded-full border-2 border-white hidden lg:block" />
+              <Image src="/testimonial-7.jpeg" alt="" width={48} height={48} className="rounded-full border-2 border-white hidden lg:block" />
             </div>
-            <p className="text-sm">Join thousands of legal professionals using our platform</p>
+            <p className="text-xs sm:text-sm">Join thousands of legal professionals using our platform</p>
           </div>
         </div>
       </div>

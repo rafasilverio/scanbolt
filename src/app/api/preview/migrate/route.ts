@@ -37,7 +37,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing tempId' }, { status: 400 });
     }
 
-    // Buscar dados do preview
+    // Verificar se já existe um contrato com este tempId
+    const existingContract = await prisma.contract.findUnique({
+      where: { tempId }
+    });
+
+    if (existingContract) {
+      // Contrato já existe, vamos apenas associá-lo ao usuário
+      const updatedContract = await prisma.contract.update({
+        where: { id: existingContract.id },
+        data: {
+          userId: session.user.id,
+          // Não modificamos o status aqui para não interromper o processamento
+        }
+      });
+
+      console.log('Contract associated with user:', {
+        contractId: updatedContract.id,
+        userId: session.user.id
+      });
+
+      return NextResponse.json({
+        success: true,
+        contractId: updatedContract.id,
+        isExisting: true
+      });
+    }
+
+    // Se não encontrou contrato, buscar dados do preview cache
+    // e criar um novo (mantendo o comportamento original para compatibilidade)
     const { data: previewCache, error: previewError } = await supabaseAdmin
       .from('preview_cache')
       .select('*')
@@ -73,6 +101,7 @@ export async function POST(request: Request) {
         issues: [], // Array vazio inicial
         suggestedClauses: [], // Array vazio inicial
         status: 'analyzing',
+        tempId: tempId, // Armazenar o tempId para referência futura
         metadata: {
           pageCount: previewCache.data.metadata?.pageCount || 1,
           createdAt: new Date(),
@@ -89,14 +118,15 @@ export async function POST(request: Request) {
       content: '[content omitted]'
     });
 
-    // Iniciar processamento em background
+    // Iniciar processamento em background com o userId correto
     if (previewCache.data.content) {
       const fileBuffer = Buffer.from(previewCache.data.content, 'base64');
       const file = new File([fileBuffer], previewCache.data.fileName, {
         type: previewCache.data.fileType || 'application/pdf'
       });
       
-      processContractInBackground(contract.id, file, session.user.id);
+      await processContractInBackground(contract.id, file, session.user.id);
+      console.log('Started background processing for contract:', contract.id);
     } else {
       console.error('No content found in preview cache');
     }
@@ -109,7 +139,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      contractId: contract.id
+      contractId: contract.id,
+      isExisting: false
     });
 
   } catch (error) {
