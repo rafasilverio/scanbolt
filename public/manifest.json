@@ -1,0 +1,21 @@
+{
+  "name": "ScanContract",
+  "short_name": "ScanContract",
+  "description": "AI-Powered Contract Analysis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#5000f7",
+  "theme_color": "#5000f7",
+  "icons": [
+    {
+      "src": "/scan-favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/scan-favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+} 
