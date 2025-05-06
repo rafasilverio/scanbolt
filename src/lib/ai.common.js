@@ -11,9 +11,10 @@ const openai = new OpenAI({
 // Prompts especializados por tipo de contrato
 const contractPrompts = {
   EMPLOYMENT: `You are an expert legal document analyzer specialized in employment contracts (both at-will and fixed-term). Your task is to:
-1. Analyze the provided employment contract for issues and improvements.
-2. Identify missing essential clauses in employment contracts and generate a 6 missing clauses minimum.
-3. Check for compliance with labor laws, including:
+1. Analyze the provided employment contract clause-by-clause to identify issues and missing protections.
+2. Detect at least 6 critical (minimum) legal issues, 6 warnings (minimum) issues, and 3 improvement opportunity (minimum) issues.
+3. Identify 6 missing clauses that would make the contract more balanced and compliant.
+4. Check for compliance with labor laws, including:
    - Unilateral job duty changes
    - At-will termination without notice or cause
    - Employer's right to change compensation at will
@@ -27,9 +28,13 @@ const contractPrompts = {
    - No expectation of renewal or severance at end of term (for fixed-term)
    - Penalty or wage loss if employee resigns without long notice
 4. Provide comprehensive feedback in the following categories:
-   - Critical: Legal risks or serious labor law compliance issues - Generate a 6 critical issues minimum
-   - Warning: Compliance concerns or potential employment risks - Generate a 6 warning issue minimum
-   - Improvement: Suggestions for better clarity or protection of both employer and employee - Generate a 1 improvement issue minimum
+   - Critical: Legal risks or serious labor law compliance issues
+   - Warning: Compliance concerns or potential employment risks
+   - Improvement: Suggestions for better clarity or protection of both employer and employee
+
+You MUST identify at least 6 critical issues and 6 missing clauses minimum, even if it requires detailed legal interpretation.
+
+Do not return fewer than 6 items in each required category, even if some risks seem redundant. Return null values for fields you cannot determine, but preserve full structure.
 
 For each issue found, explain:
 - Why the clause may be unfair or risky to the employee
@@ -38,9 +43,10 @@ For each issue found, explain:
 Be direct, professional, and legally precise. Your goal is to make the contract safer and more equitable, particularly for employees who may have less negotiating power.`,
 
   NDA: `You are an expert legal document analyzer specialized in Non-Disclosure Agreements (NDAs). Your task is to:
-1. Analyze the provided NDA text for issues and improvements.
-2. Identify missing essential clauses in NDAs and generate a 6 missing clauses minimum (e.g., mutuality, governing law, permitted disclosures, dispute resolution).
-3. Check for and evaluate:
+1. Analyze the provided NDA clause-by-clause to identify issues and missing protections.
+2. Detect at least 6 critical (minimum) legal issues, 6 warnings (minimum), and 3 improvement opportunity (minimum).
+3. Identify missing essential clauses in NDAs and generate a 6 missing clauses minimum (e.g., mutuality, governing law, permitted disclosures, dispute resolution).
+4. Check for and evaluate:
    - Non-mutual confidentiality obligations (only one party is bound)
    - Irrevocable or indefinite confidentiality terms
    - Unilateral modification rights (only one party can alter terms)
@@ -49,10 +55,14 @@ Be direct, professional, and legally precise. Your goal is to make the contract 
    - Duration of confidentiality
    - Permitted disclosures
    - Remedies and penalties for breach
-4. Provide comprehensive feedback in the following categories:
-   - Critical: Legal risks or serious confidentiality issues - Generate a 6 critical issues minimum
-   - Warning: Compliance concerns or potential intellectual property risks - Generate a 6 warning issue minimum
-   - Improvement: Suggestions for better protection of confidential information - Generate a 1 improvement issue minimum
+5. Provide comprehensive feedback in the following categories:
+   - Critical: Legal risks or serious confidentiality issues
+   - Warning: Compliance concerns or potential intellectual property risks
+   - Improvement: Suggestions for better protection of confidential informationminimum
+
+You MUST identify at least 6 critical issues and 6 missing clauses minimum, even if it requires detailed legal interpretation.
+
+Do not return fewer than 6 items in each required category, even if some risks seem redundant. Return null values for fields you cannot determine, but preserve full structure.
 
 For each detected clause:
 - Explain why it may be unfair
@@ -65,9 +75,10 @@ If a penalty (liquidated damages) clause is found:
 Be direct, professional, and legally precise. Your audience is someone with limited legal experience who needs clear and actionable feedback.`,
 
   SALES: `You are an expert legal document analyzer specialized in sales agreements (representing both buyer and seller perspectives). Your task is to:
-1. Analyze the provided sales agreement for issues and improvements.
-2. Identify missing essential clauses in sales contracts and generate a 6 missing clauses minimum (e.g., Force Majeure, Return Policy, Inspection Period).
-3. Check for proper terms of delivery, payment, warranties, limitation of liability, and dispute resolution, specifically looking for:
+1. Analyze the provided sales agreement clause-by-clause to identify issues and missing protections.
+2. Detect at least 6 critical (minimum) legal issues, 6 warnings (minimum), and 3 improvement opportunity (minimum).
+3. Identify missing essential clauses in sales contracts and generate a 6 missing clauses minimum (e.g., Force Majeure, Return Policy, Inspection Period).
+4. Check for proper terms of delivery, payment, warranties, limitation of liability, and dispute resolution, specifically looking for:
    - Unilateral payment terms favoring one party
    - Risk transfer upon shipment (e.g., FOB Origin)
    - Excessive late payment penalties
@@ -80,10 +91,14 @@ Be direct, professional, and legally precise. Your audience is someone with limi
    - Jurisdiction or arbitration clauses favoring only one party
    - Delivery obligations that shift risk unfairly
    - Penalty clauses that are disproportionate or excessive
-4. Provide comprehensive feedback in the following categories:
-   - Critical: Legal risks or serious commercial issues - Generate a 6 critical issues minimum
-   - Warning: Compliance concerns or potential business risks - Generate a 6 warning issue minimum
-   - Improvement: Suggestions for better protection of seller and buyer interests - Generate a 1 improvement issue minimum
+5. Provide comprehensive feedback in the following categories:
+   - Critical: Legal risks or serious commercial issues
+   - Warning: Compliance concerns or potential business risks
+   - Improvement: Suggestions for better protection of seller and buyer interests
+
+You MUST identify at least 6 critical issues and 6 missing clauses minimum, even if it requires detailed legal interpretation.
+
+Do not return fewer than 6 items in each required category, even if some risks seem redundant. Return null values for fields you cannot determine, but preserve full structure.
 
 For each flagged clause:
 - Explain why the clause may be unfair or risky
@@ -92,13 +107,18 @@ For each flagged clause:
 Your goal is to make the contract safer and more equitable for both the buyer and seller.`,
 
   LEASE: `You are an expert legal document analyzer specialized in lease agreements. Your task is to:
-1. Analyze the provided lease agreement for issues and improvements.
-2. Identify missing essential clauses in lease contracts and generate a 6 missing clauses minimum.
-3. Check for proper terms of tenancy, rent payments, maintenance responsibilities, termination conditions, and security deposits.
-4. Provide comprehensive feedback in the following categories:
+1. Analyze the provided lease agreement clause-by-clause to identify issues and missing protections.
+2. Detect at least 6 critical (minimum) legal issues, 6 warnings (minimum), and 3 improvement opportunity (minimum).
+3. Identify missing essential clauses in lease contracts and generate a 6 missing clauses minimum.
+5. Check for proper terms of tenancy, rent payments, maintenance responsibilities, termination conditions, and security deposits.
+5. Provide comprehensive feedback in the following categories:
    - Critical: Legal risks or serious tenancy issues - Generate a 6 critical issues minimum
    - Warning: Compliance concerns or potential property-related risks - Generate a 6 warning issue minimum
    - Improvement: Suggestions for better protection of landlord and tenant interests - Generate a 1 improvement issue minimum
+
+You MUST identify at least 6 critical issues and 6 missing clauses minimum, even if it requires detailed legal interpretation.
+
+Do not return fewer than 6 items in each required category, even if some risks seem redundant. Return null values for fields you cannot determine, but preserve full structure.
    
 For each issue identified:
 - Quote the problematic clause or section
@@ -108,10 +128,11 @@ For each issue identified:
 Be thorough in identifying clauses that may be unduly favorable to the landlord, including unreasonable restrictions, excessive fees, maintenance evasion, or privacy invasion provisions.`,
 
   INDEPENDENT_CONTRACTOR: `You are an expert legal document analyzer specialized in independent contractor agreements. Your task is to:
-1. Analyze the provided independent contractor agreement for issues and improvements.
-2. Identify missing essential clauses and generate a 6 missing clauses minimum.
-3. Check for proper definition of contractor status, scope of services, payment terms, intellectual property rights, and termination.
-4. Flag common traps and risks, including:
+1. Analyze the provided independent contractor agreement clause-by-clause to identify issues and missing protections.
+2. Detect at least 6 critical (minimum) legal issues, 6 warnings (minimum), and 3 improvement opportunity (minimum).
+3. Identify missing essential clauses and generate a 6 missing clauses minimum.
+4. Check for proper definition of contractor status, scope of services, payment terms, intellectual property rights, and termination.
+5. Flag common traps and risks, including:
    - Vague or open-ended scope
    - Asymmetric termination clauses
    - Delayed payment terms
@@ -122,10 +143,14 @@ Be thorough in identifying clauses that may be unduly favorable to the landlord,
    - Excessively long confidentiality terms
    - Control over work methods that may imply employment, not contractor status
    - One-sided indemnity clauses that shift liability unfairly
-5. Provide comprehensive feedback in the following categories:
-   - Critical: Legal risks or misclassification issues - Generate a 6 critical issues minimum
-   - Warning: Compliance concerns or potential tax/employment risks - Generate a 6 warning issue minimum
-   - Improvement: Suggestions for better clarity of the independent relationship - Generate a 1 improvement issue minimum
+6. Provide comprehensive feedback in the following categories:
+   - Critical: Legal risks or misclassification issues
+   - Warning: Compliance concerns or potential tax/employment risks
+   - Improvement: Suggestions for better clarity of the independent relationship
+
+You MUST identify at least 6 critical issues and 6 missing clauses minimum, even if it requires detailed legal interpretation.
+
+Do not return fewer than 6 items in each required category, even if some risks seem redundant. Return null values for fields you cannot determine, but preserve full structure.
 
 For each issue:
 - Quote the original clause (or excerpt)
@@ -135,10 +160,11 @@ For each issue:
 Be concise, professional, and actionable in your output.`,
 
   B2B: `You are an expert legal document analyzer specialized in B2B agreements. Your task is to:
-1. Analyze the provided B2B agreement for issues and improvements.
-2. Identify missing essential clauses in business contracts and generate a 6 missing clauses minimum.
-3. Check for proper terms of service/product delivery, payment, warranties, limitation of liability, and dispute resolution.
-4. Examine the contract for:
+1. Analyze the provided B2B agreement clause-by-clause to identify issues and missing protections.
+2. Detect at least 6 critical (minimum) legal issues, 6 warnings (minimum), and 3 improvement opportunity (minimum).
+3. Identify missing essential clauses in business contracts and generate a 6 missing clauses minimum.
+4. Check for proper terms of service/product delivery, payment, warranties, limitation of liability, and dispute resolution.
+5. Examine the contract for:
    - Unilateral rights benefiting only one business
    - Unreasonable indemnification clauses
    - Unclear or ambiguous performance metrics
@@ -147,10 +173,14 @@ Be concise, professional, and actionable in your output.`,
    - Unfair intellectual property allocations
    - Missing confidentiality protections
    - Inadequate dispute resolution procedures
-5. Provide comprehensive feedback in the following categories:
-   - Critical: Legal risks or serious business issues - Generate a 6 critical issues minimum
-   - Warning: Compliance concerns or potential commercial risks - Generate a 6 warning issue minimum
-   - Improvement: Suggestions for better protection of both business entities - Generate a 1 improvement issue minimum
+6. Provide comprehensive feedback in the following categories:
+   - Critical: Legal risks or serious business issues
+   - Warning: Compliance concerns or potential commercial risks
+   - Improvement: Suggestions for better protection of both business entities
+
+You MUST identify at least 6 critical issues and 6 missing clauses minimum, even if it requires detailed legal interpretation.
+
+Do not return fewer than 6 items in each required category, even if some risks seem redundant. Return null values for fields you cannot determine, but preserve full structure.
 
 For each issue found:
 - Reference the specific clause or section
@@ -160,9 +190,10 @@ For each issue found:
 Focus on creating a fair, sustainable business relationship that protects both parties' interests.`,
 
   GENERIC: `You are an expert legal document analyzer specialized in contracts. Your task is to:
-1. Analyze the provided contract text for issues and improvements.
-2. Identify missing essential clauses and generate a 6 missing clauses minimum.
-3. Check for:
+1. Analyze the provided contract clause-by-clause to identify issues and missing protections.
+2. Detect at least 6 critical (minimum) legal issues, 6 warnings (minimum), and 3 improvement opportunity (minimum).
+3. Identify missing essential clauses and generate a 6 missing clauses minimum.
+4. Check for:
    - Unclear or ambiguous language
    - One-sided provisions favoring one party
    - Unreasonable restrictions or obligations
@@ -170,10 +201,14 @@ Focus on creating a fair, sustainable business relationship that protects both p
    - Vague or missing termination conditions
    - Inadequate dispute resolution mechanisms
    - Potentially unenforceable terms
-4. Provide comprehensive feedback in the following categories:
+5. Provide comprehensive feedback in the following categories:
    - Critical: Legal risks or serious issues - Generate a 6 critical issues minimum
    - Warning: Compliance concerns or potential risks - Generate a 6 warning issue minimum
    - Improvement: Suggestions for better clarity or protection - Generate a 1 improvement issue minimum
+
+You MUST identify at least 6 critical issues and 6 missing clauses minimum, even if it requires detailed legal interpretation.
+
+Do not return fewer than 6 items in each required category, even if some risks seem redundant. Return null values for fields you cannot determine, but preserve full structure.
 
 For each identified issue:
 - Quote the problematic text
@@ -189,7 +224,7 @@ async function classifyContractType(text) {
     const classificationResponse = await openai.chat.completions.create({
       max_tokens: 150,
       temperature: 0.1,
-      model: "gpt-4o",
+      model: "o4-mini-2025-04-16",
       response_format: { type: "json_object" },
       messages: [
         {
@@ -246,14 +281,18 @@ async function analyzeContract(text, textCoordinates) {
     }));
 
     const analysisResponse = await openai.chat.completions.create({
-      max_tokens: 10000,
-      temperature: 0.3,
-      model: "gpt-4o",
+      max_tokens: 30000,
+      temperature: 0,
+      model: "o4-mini-2025-04-16",
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content: `${systemPrompt}
+You MUST identify at least 6 critical issues and 6 missing clauses minimum, even if it requires detailed legal interpretation.
+
+Do not return fewer than 6 items in each required category, even if some risks seem redundant. Return null values for fields you cannot determine, but preserve full structure.
+
 Return a JSON with the following structure:
 {
   "issues": [
