@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('@supabase/supabase-js');
 const PDFParser = require('pdf2json');
 const { getNextJob } = require('../lib/queue.common');
-const { analyzeContract } = require('../lib/ai.common');
+const { analyzeContract, updateContractStatus } = require('../lib/ai.common');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
 
@@ -165,10 +165,11 @@ async function processJob(job) {
     console.log(`Page count: ${pageCount}`);
     console.log(`Text coordinates count: ${textCoordinates.size}`);
     
-    // 2. Análise da IA
+    // 2. Análise da IA com o novo orquestrador
     console.log('Running AI analysis...');
-    const { issues, suggestedClauses } = await analyzeContract(decodedText, textCoordinates);
+    const { issues, suggestedClauses, contractType, confidence } = await analyzeContract(decodedText, textCoordinates);
     console.log(`Analysis completed. Found ${issues.length} issues and ${suggestedClauses.length} clauses`);
+    console.log(`Contract classified as: ${contractType} with confidence: ${confidence}`);
     
     // 3. Verificar se o arquivo já foi enviado para o storage
     // Primeiro, verifica se já temos uma URL de arquivo no contrato
@@ -229,35 +230,37 @@ async function processJob(job) {
       id: clause.id || crypto.randomUUID()
     }));
 
-    // Converter para JSON strings
-    const issuesJson = JSON.stringify(issuesData);
-    const suggestedClausesJson = JSON.stringify(suggestedClausesData);
-    const metadataJson = JSON.stringify({
+    // Criar metadados incluindo o tipo de contrato identificado
+    const contractMetadata = {
       pageCount,
       updatedAt: new Date().toISOString(),
       analyzedAt: new Date().toISOString(),
-      processingTime: Date.now() - (job.createdAt || Date.now())
-    });
+      processingTime: Date.now() - (job.createdAt || Date.now()),
+      contractType,
+      confidence
+    };
 
-    // Atualizar todos os campos com SQL direto
-    await prisma.$executeRaw`
-      UPDATE "Contract" 
-      SET 
-        "fileUrl" = ${fileUrl},
-        "fileName" = ${fileName},
-        "content" = ${decodedText},
-        "numPages" = ${pageCount},
-        "status" = 'under_review',
-        "issues" = ${issuesJson}::jsonb,
-        "suggestedClauses" = ${suggestedClausesJson}::jsonb,
-        "metadata" = ${metadataJson}::jsonb,
-        "updatedAt" = ${new Date()}
-      WHERE id = ${job.contractId}::uuid
-    `;
+    // Preparar informações do arquivo para atualização
+    const fileInfo = {
+      fileUrl,
+      fileName,
+      content: decodedText,
+      numPages: pageCount
+    };
 
-    console.log(`Contract ${job.contractId} updated successfully with analysis results`);
-    console.log(`Job completed for contract: ${job.contractId}`);
-    
+    // Atualizar o contrato com a análise, metadados e informações do arquivo
+    await updateContractStatus(
+      job.contractId,
+      'under_review',
+      issuesData,
+      suggestedClausesData,
+      contractMetadata,
+      fileInfo
+    );
+
+    console.log(`Contract ${job.contractId} successfully processed and updated.`);
+    return { success: true };
+
   } catch (error) {
     console.error('Error processing job:', error);
     

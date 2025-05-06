@@ -44,7 +44,8 @@ export async function GET(
       select: { 
         status: true,
         issues: true,
-        suggestedClauses: true
+        suggestedClauses: true,
+        metadata: true
       }
     });
 
@@ -52,10 +53,30 @@ export async function GET(
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
+    // Extrair informações do tipo de contrato do metadata
+    let contractType = 'GENERIC';
+    let confidence = 0;
+    
+    if (contract.metadata) {
+      try {
+        // O metadata pode estar armazenado como string ou objeto
+        const metadata = typeof contract.metadata === 'object' 
+          ? contract.metadata 
+          : JSON.parse(contract.metadata as string);
+        
+        contractType = metadata.contractType || 'GENERIC';
+        confidence = metadata.confidence || 0;
+      } catch (e) {
+        console.error('Error parsing contract metadata:', e);
+      }
+    }
+
     return NextResponse.json({
       status: contract.status,
       issues: contract.issues,
       suggestedClauses: contract.suggestedClauses,
+      contractType,
+      confidence,
       isAnalysisComplete: contract.status === 'under_review' && 
                          Array.isArray(contract.issues) && 
                          contract.issues.length > 0
