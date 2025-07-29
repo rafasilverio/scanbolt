@@ -19,8 +19,7 @@ export async function analyzeContract(text: string, textCoordinates: Map<string,
     }));
 
     const analysisResponse = await openai.chat.completions.create({
-      max_tokens: 4000,
-      temperature: 0.2,
+      max_completion_tokens: 4000,
       model: "gpt-4o",
       response_format: { type: "json_object" },
       messages: [

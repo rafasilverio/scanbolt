@@ -88,8 +88,8 @@ export default function PreviewPage({ params }: { params: { tempId: string } }) 
               <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
             </div>
             <h1 className="text-2xl font-bold mb-2 text-white">Loading your contract</h1>
-            <p className="text-white/60 mb-6">Please wait while we fetch your data...</p>
-            <Progress value={30} className="h-2 bg-white/10" />
+            <p className="text-white/60 mb-6">Please REGISTER to see full analysis while we fetch your data...</p>
+            <Progress value={95} className="h-2 bg-white/10" />
           </div>
         </div>
       </div>
@@ -189,7 +189,7 @@ export default function PreviewPage({ params }: { params: { tempId: string } }) 
                   
                   <div className="mb-6">
                     <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                      className="w-full bg-green-600 hover:bg-green-700 text-white" 
                       onClick={() => setShowRegisterDialog(true)}
                     >
                       Register & View Complete Analysis

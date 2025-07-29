@@ -116,7 +116,7 @@ export async function POST(
 
       // Generate AI improvements
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -132,8 +132,7 @@ export async function POST(
 Contract to improve: ${intermediateContent}`
           }
         ],
-        temperature: 0.3,
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
         response_format: { type: "json_object" }
       });
 

@@ -222,8 +222,7 @@ Make practical, balanced recommendations that would create a fair agreement for 
 async function classifyContractType(text) {
   try {
     const classificationResponse = await openai.chat.completions.create({
-      max_tokens: 150,
-      temperature: 0.1,
+      max_completion_tokens: 150,
       model: "o4-mini-2025-04-16",
       response_format: { type: "json_object" },
       messages: [
@@ -281,9 +280,8 @@ async function analyzeContract(text, textCoordinates) {
     }));
 
     const analysisResponse = await openai.chat.completions.create({
-      max_tokens: 30000,
-      temperature: 0,
-      model: "o4-mini-2025-04-16",
+      max_completion_tokens: 16384,
+      model: "gpt-4o",
       response_format: { type: "json_object" },
       messages: [
         {
